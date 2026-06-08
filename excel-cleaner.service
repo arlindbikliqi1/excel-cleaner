@@ -1,0 +1,14 @@
+[Unit]
+Description=Excel Cleaner Flask App
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/mnt/c/Users/NB/Desktop/excel-cleaner
+Environment=FLASK_DEBUG=0
+ExecStart=/mnt/c/Users/NB/Desktop/excel-cleaner/venv/bin/python app.py
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

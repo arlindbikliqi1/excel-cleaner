@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% block title %}Dashboard - Excel Cleaner{% endblock %}
+
+{% block extra_css %}
+<style>
+  .upload-zone {
+    border: 2px dashed #cbd5e1;
+    border-radius: 12px;
+    padding: 2rem 1.5rem;
+    text-align: center;
+    background: #f8fafc;
+    transition: border-color 0.2s, background 0.2s;
+  }
+  .upload-zone:hover { border-color: #3b82f6; background: #eff6ff; }
+  .upload-zone input[type=file] { max-width: 100%; margin: 0 auto; }
+  .stat-card {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    color: #fff;
+    border-radius: var(--card-radius);
+    padding: 1.25rem;
+    height: 100%;
+  }
+  .stat-card.secondary {
+    background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1><i class="fas fa-home text-primary me-2"></i>Dashboard</h1>
+  <p class="subtitle">Ngarko Excel-in, transformo dhe shkarko skedarin e pastruar</p>
+</div>
+
+<div class="row g-4 mb-4">
+  <div class="col-lg-7">
+    <div class="card-app h-100">
+      <div class="card-header"><i class="fas fa-upload me-1"></i> Ngarko Excel</div>
+      <div class="card-body">
+        <div class="upload-zone mb-3">
+          <i class="fas fa-file-excel fa-2x text-success mb-2"></i>
+          <p class="small text-muted mb-3">
+            Sistemi kërkon kolonat <strong>Pranuesi</strong>, <strong>Produkti</strong>,
+            <strong>SHITESI</strong> dhe ndryshon vetëm ato — të gjitha kolonat e tjera dhe
+            radhitja e rreshtave mbeten si në Excel-in origjinal.
+          </p>
+          <form method="post" action="{{ url_for('upload') }}" enctype="multipart/form-data">
+            <input type="file" class="form-control mb-3" name="file" accept=".xlsx,.xls" required>
+            <button type="submit" class="btn btn-success btn-lg w-100">
+              <i class="fas fa-magic me-1"></i> Ngarko dhe Transformo
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-5">
+    <div class="stat-card mb-3 {% if not last_download %}secondary{% endif %}">
+      <div class="small opacity-75 mb-1">Eksporti i fundit</div>
+      {% if last_download %}
+      <div class="fw-bold text-break mb-3">{{ last_download }}</div>
+      <a href="{{ url_for('download', filename=last_download) }}" class="btn btn-light btn-sm">
+        <i class="fas fa-download me-1"></i> Shkarko Excel
+      </a>
+      {% else %}
+      <p class="mb-0 small">Ngarko një skedar për të filluar</p>
+      {% endif %}
+    </div>
+    {% if row_count %}
+    <div class="card-app">
+      <div class="card-body py-3 d-flex align-items-center gap-3">
+        <div class="rounded-circle bg-success bg-opacity-10 p-3">
+          <i class="fas fa-check text-success fa-lg"></i>
+        </div>
+        <div>
+          <div class="fw-bold">{{ row_count }} rreshta</div>
+          <div class="small text-muted">u përpunuan me sukses</div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+{% if unknown_businesses %}
+<div class="alert alert-warning border-0 shadow-sm d-flex flex-wrap align-items-center gap-2">
+  <div class="flex-grow-1">
+    <strong><i class="fas fa-exclamation-triangle me-1"></i> {{ unknown_businesses|length }} shitës të panjohur</strong>
+    <div class="small mt-1">{{ unknown_businesses[:8]|join(', ') }}{% if unknown_businesses|length > 8 %}...{% endif %}</div>
+  </div>
+  <a href="{{ url_for('businesses') }}" class="btn btn-warning btn-sm">Menaxho shitësit</a>
+</div>
+{% endif %}
+
+{% if preview_html %}
+<div class="card-app">
+  <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+    <span><i class="fas fa-table me-1"></i> Preview ({{ row_count }} rreshta)</span>
+    {% if last_download %}
+    <a href="{{ url_for('download', filename=last_download) }}" class="btn btn-sm btn-primary">
+      <i class="fas fa-download me-1"></i> Shkarko
+    </a>
+    {% endif %}
+  </div>
+  <div class="preview-box">{{ preview_html|safe }}</div>
+</div>
+{% else %}
+<div class="card-app">
+  <div class="card-body text-center py-5 text-muted">
+    <i class="fas fa-table fa-3x mb-3 opacity-25"></i>
+    <p class="mb-0">Nuk ka preview. Ngarko një Excel për të parë rezultatin.</p>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

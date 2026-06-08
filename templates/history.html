@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}Historiku - Excel Cleaner{% endblock %}
+
+{% block extra_css %}
+<style>
+  #historySearch { max-width: 320px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex flex-wrap justify-content-between align-items-start gap-3">
+  <div>
+    <h1><i class="fas fa-clock-rotate-left text-primary me-2"></i>Historiku</h1>
+    <p class="subtitle">Skedarët e përpunuar më parë</p>
+  </div>
+  <div class="search-box" style="min-width:200px;flex:1;max-width:360px">
+    <i class="fas fa-search"></i>
+    <input type="search" class="form-control" id="historySearch" placeholder="Kërko skedar..." autocomplete="off">
+  </div>
+</div>
+
+<div class="card-app">
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0" id="historyTable">
+        <thead class="table-light">
+          <tr>
+            <th>Data</th>
+            <th>Origjinal</th>
+            <th>Export</th>
+            <th class="text-center">Rreshta</th>
+            <th>Admin</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for job in jobs %}
+          <tr data-history-row data-search-text="{{ (job.original_filename or '')|lower }} {{ job.output_filename|lower }}">
+            <td class="text-nowrap small">{{ job.created_at }}</td>
+            <td class="small text-break">{{ job.original_filename or '—' }}</td>
+            <td class="small"><code class="text-primary">{{ job.output_filename }}</code></td>
+            <td class="text-center"><span class="badge bg-light text-dark border">{{ job.row_count }}</span></td>
+            <td class="small">{{ job.created_by }}</td>
+            <td class="text-end">
+              <a class="btn btn-sm btn-primary" href="{{ url_for('download', filename=job.output_filename) }}" title="Shkarko">
+                <i class="fas fa-download"></i>
+              </a>
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="6" class="text-center text-muted py-5">Asnjë përpunim ende.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  const input = document.getElementById('historySearch');
+  if (!input) return;
+  input.addEventListener('input', function () {
+    const q = input.value.trim().toLowerCase();
+    document.querySelectorAll('[data-history-row]').forEach(function (row) {
+      const t = row.dataset.searchText || '';
+      row.style.display = !q || t.includes(q) ? '' : 'none';
+    });
+  });
+})();
+</script>
+{% endblock %}

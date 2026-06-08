@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}Rregullat e Pranuesve - Excel Cleaner{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1><i class="fas fa-user-edit text-primary me-2"></i>Rregullat e Pranuesve</h1>
+  <p class="subtitle">Mbiemra random kur emri ka vetëm një fjalë — rregullat e tjera janë fikse në sistem</p>
+</div>
+
+<div class="row g-4">
+  <div class="col-lg-5">
+    <div class="card-app h-100">
+      <div class="card-header">
+        <i class="fas fa-lock text-secondary me-1"></i> Rregulla fikse
+      </div>
+      <div class="card-body small text-muted">
+        <ul class="mb-0 ps-3">
+          {% for line in rules_summary %}
+          <li class="mb-2">{{ line }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-7">
+    <div class="card-app">
+      <div class="card-header"><i class="fas fa-id-card me-1"></i> Mbiemra (editueshme)</div>
+      <div class="card-body">
+        <form method="post" class="input-group mb-3">
+          <input type="hidden" name="action" value="add_surname">
+          <input type="text" class="form-control" name="surname" placeholder="Mbiemër i ri" required>
+          <button type="submit" class="btn btn-primary">Shto</button>
+        </form>
+        <div class="d-flex flex-wrap gap-2">
+          {% for s in rules.surnames %}
+          <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 d-inline-flex align-items-center gap-2 py-2 px-3">
+            {{ s }}
+            <form method="post" class="d-inline">
+              <input type="hidden" name="action" value="delete_surname">
+              <input type="hidden" name="surname" value="{{ s }}">
+              <button type="submit" class="btn-close btn-sm" aria-label="Fshi"></button>
+            </form>
+          </span>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <div class="card-app mt-4 border-success border-opacity-25">
+      <div class="card-header bg-success bg-opacity-10 text-success">
+        <i class="fas fa-flask me-1"></i> Testo pastrimin
+      </div>
+      <div class="card-body">
+        <form method="post" class="row g-2 align-items-end">
+          <input type="hidden" name="action" value="test_name">
+          <div class="col-sm-8">
+            <label class="form-label small">Emri origjinal</label>
+            <input type="text" class="form-control" name="test_input" value="{{ test_input }}"
+                   placeholder="Jonuz Muca / Web O">
+          </div>
+          <div class="col-sm-4">
+            <button type="submit" class="btn btn-success w-100">Testo</button>
+          </div>
+        </form>
+        {% if test_output is not none %}
+        <div class="alert alert-success mt-3 mb-0">
+          <strong>Rezultati:</strong> {{ test_output or '(bosh)' }}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

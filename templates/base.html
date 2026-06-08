@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="sq">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Excel Cleaner{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+  <style>
+    :root {
+      --sidebar-width: 260px;
+      --sidebar-bg: #1e293b;
+      --sidebar-active: #3b82f6;
+      --page-bg: #f1f5f9;
+      --card-radius: 12px;
+      --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.08);
+      --shadow-md: 0 4px 12px rgba(15, 23, 42, 0.1);
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      min-height: 100vh;
+      background: var(--page-bg);
+      color: #334155;
+    }
+    .app-shell { display: flex; min-height: 100vh; }
+    .sidebar {
+      width: var(--sidebar-width);
+      background: var(--sidebar-bg);
+      color: #e2e8f0;
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      position: fixed;
+      top: 0; left: 0;
+      height: 100vh;
+      z-index: 1040;
+      transition: transform 0.25s ease;
+    }
+    .sidebar-brand {
+      padding: 1.25rem 1.25rem 1rem;
+      font-weight: 700;
+      font-size: 1.15rem;
+      color: #fff;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .sidebar-brand i { color: #22c55e; }
+    .sidebar-nav {
+      list-style: none;
+      padding: 0.75rem 0.5rem;
+      margin: 0;
+      flex: 1;
+      overflow-y: auto;
+    }
+    .sidebar-nav a {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.65rem 1rem;
+      margin: 2px 0;
+      border-radius: 8px;
+      color: #94a3b8;
+      text-decoration: none;
+      font-size: 0.9rem;
+      font-weight: 500;
+      transition: all 0.15s;
+    }
+    .sidebar-nav a:hover {
+      background: rgba(255,255,255,0.06);
+      color: #f1f5f9;
+    }
+    .sidebar-nav a.active {
+      background: rgba(59, 130, 246, 0.2);
+      color: #fff;
+    }
+    .sidebar-nav a.active i { color: var(--sidebar-active); }
+    .sidebar-nav a.logout {
+      color: #f87171;
+      margin-top: 0.5rem;
+    }
+    .sidebar-nav a.logout:hover {
+      background: rgba(248, 113, 113, 0.12);
+      color: #fca5a5;
+    }
+    .sidebar-footer {
+      padding: 1rem 1.25rem;
+      border-top: 1px solid rgba(255,255,255,0.08);
+      font-size: 0.75rem;
+      color: #64748b;
+    }
+    .main-wrap {
+      flex: 1;
+      margin-left: var(--sidebar-width);
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+    }
+    .topbar {
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.75rem 1rem;
+      background: #fff;
+      border-bottom: 1px solid #e2e8f0;
+      position: sticky;
+      top: 0;
+      z-index: 1030;
+    }
+    .main-content {
+      flex: 1;
+      padding: 1.5rem;
+      max-width: 1400px;
+      width: 100%;
+      margin: 0 auto;
+    }
+    .page-header {
+      margin-bottom: 1.5rem;
+    }
+    .page-header h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #0f172a;
+      margin: 0 0 0.25rem;
+    }
+    .page-header .subtitle {
+      color: #64748b;
+      font-size: 0.9rem;
+      margin: 0;
+    }
+    .card-app {
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: var(--card-radius);
+      box-shadow: var(--shadow-sm);
+      margin-bottom: 1.25rem;
+      overflow: hidden;
+    }
+    .card-app .card-header {
+      background: #fff;
+      border-bottom: 1px solid #f1f5f9;
+      padding: 0.85rem 1.25rem;
+      font-weight: 600;
+      font-size: 0.95rem;
+      color: #0f172a;
+    }
+    .card-app .card-body { padding: 1.25rem; }
+    .stat-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.35rem 0.75rem;
+      background: #eff6ff;
+      color: #1d4ed8;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+    .search-box {
+      position: relative;
+    }
+    .search-box i {
+      position: absolute;
+      left: 1rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #94a3b8;
+      pointer-events: none;
+    }
+    .search-box input {
+      padding-left: 2.75rem;
+      border-radius: 10px;
+      border: 1px solid #e2e8f0;
+      height: 44px;
+      font-size: 0.95rem;
+    }
+    .search-box input:focus {
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+    }
+    .preview-box {
+      max-height: 65vh;
+      overflow: auto;
+      border-radius: 0 0 var(--card-radius) var(--card-radius);
+    }
+    .preview-box table { font-size: 0.8rem; margin-bottom: 0; }
+    .btn { border-radius: 8px; font-weight: 500; }
+    .badge-cat {
+      background: #f1f5f9;
+      color: #475569;
+      border: 1px solid #e2e8f0;
+      font-weight: 500;
+      padding: 0.35em 0.65em;
+    }
+    .overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.5);
+      z-index: 1035;
+    }
+    .overlay.show { display: block; }
+    @media (max-width: 991px) {
+      .sidebar {
+        transform: translateX(-100%);
+      }
+      .sidebar.open { transform: translateX(0); }
+      .main-wrap { margin-left: 0; }
+      .topbar { display: flex; }
+      .main-content { padding: 1rem; }
+    }
+  </style>
+  {% block extra_css %}{% endblock %}
+</head>
+<body>
+  <div class="overlay" id="sidebarOverlay" aria-hidden="true"></div>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-brand">
+        <i class="fas fa-file-excel"></i>
+        <span>Excel Cleaner</span>
+      </div>
+      <ul class="sidebar-nav">
+        <li>
+          <a href="{{ url_for('dashboard') }}" class="{% if request.endpoint == 'dashboard' %}active{% endif %}">
+            <i class="fas fa-home fa-fw"></i> Dashboard
+          </a>
+        </li>
+        <li>
+          <a href="{{ url_for('businesses') }}" class="{% if request.endpoint == 'businesses' %}active{% endif %}">
+            <i class="fas fa-store fa-fw"></i> Shitësit &amp; Kategoritë
+          </a>
+        </li>
+        <li>
+          <a href="{{ url_for('recipient_rules') }}" class="{% if request.endpoint == 'recipient_rules' %}active{% endif %}">
+            <i class="fas fa-user-edit fa-fw"></i> Rregullat e Pranuesve
+          </a>
+        </li>
+        <li>
+          <a href="{{ url_for('history') }}" class="{% if request.endpoint == 'history' %}active{% endif %}">
+            <i class="fas fa-clock-rotate-left fa-fw"></i> Historiku
+          </a>
+        </li>
+        <li class="mt-2 pt-2 border-top border-secondary border-opacity-25">
+          <a href="{{ url_for('logout') }}" class="logout">
+            <i class="fas fa-sign-out-alt fa-fw"></i> Dil
+          </a>
+        </li>
+      </ul>
+      <div class="sidebar-footer">Admin panel</div>
+    </aside>
+
+    <div class="main-wrap">
+      <header class="topbar">
+        <button type="button" class="btn btn-light btn-sm" id="sidebarToggle" aria-label="Menu">
+          <i class="fas fa-bars"></i>
+        </button>
+        <span class="fw-semibold text-dark">Excel Cleaner</span>
+        <span></span>
+      </header>
+
+      <main class="main-content">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="alert alert-{{ category }} alert-dismissible fade show shadow-sm" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+              </div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+        {% block content %}{% endblock %}
+      </main>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    (function () {
+      const sidebar = document.getElementById('sidebar');
+      const overlay = document.getElementById('sidebarOverlay');
+      const toggle = document.getElementById('sidebarToggle');
+      function closeSidebar() {
+        sidebar.classList.remove('open');
+        overlay.classList.remove('show');
+      }
+      if (toggle) {
+        toggle.addEventListener('click', function () {
+          sidebar.classList.toggle('open');
+          overlay.classList.toggle('show');
+        });
+      }
+      if (overlay) overlay.addEventListener('click', closeSidebar);
+    })();
+  </script>
+  {% block extra_js %}{% endblock %}
+</body>
+</html>

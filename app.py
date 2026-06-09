@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 import os
 import re
@@ -840,4 +842,5 @@ def download(filename):
 
 if __name__ == "__main__":
     debug = os.environ.get("FLASK_DEBUG", "0") == "1"
-    app.run(debug=debug, use_reloader=debug, host="0.0.0.0", port=5000)
+    port = int(os.environ.get("PORT", "5001"))
+    app.run(debug=debug, use_reloader=debug, host="0.0.0.0", port=port)

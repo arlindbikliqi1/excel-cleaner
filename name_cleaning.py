@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """Pastrimi i kolonës Pranuesi — rregullat strukturore janë të fiksuara në kod."""
 import random
 import re

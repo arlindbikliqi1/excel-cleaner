@@ -8,6 +8,8 @@ from pathlib import Path
 import pandas as pd
 from werkzeug.security import check_password_hash, generate_password_hash
 
+PASSWORD_HASH_METHOD = "pbkdf2:sha256"
+
 from name_cleaning import DEFAULT_SURNAMES
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -91,7 +93,7 @@ def init_db():
         if not admin:
             conn.execute(
                 "INSERT INTO admins (username, password_hash) VALUES (?, ?)",
-                ("admin", generate_password_hash("admin123")),
+                ("admin", generate_password_hash("admin123", method=PASSWORD_HASH_METHOD)),
             )
         conn.commit()
 

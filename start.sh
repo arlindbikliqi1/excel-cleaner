@@ -13,5 +13,6 @@ else
 fi
 
 export FLASK_DEBUG=0
-echo "Excel Cleaner: http://127.0.0.1:5000"
+export PORT="${PORT:-5001}"
+echo "Excel Cleaner: http://127.0.0.1:${PORT}"
 exec python app.py

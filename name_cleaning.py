@@ -14,7 +14,7 @@ HARDCODED_SEPARATORS = [
 HARDCODED_SLASH_RULE = "keep_first"
 HARDCODED_SYMBOLS = [
     "!", "@", "#", "$", "%", "^", "&", "*", "(", ")", "_",
-    "+", "{", "}", "[", "]", ":", ";", "<", ">", "?", ",", "-",
+    "+", "{", "}", "[", "]", ":", ";", "<", ">", "?", ",", "-", ".",
 ]
 HARDCODED_BUSINESS_KEYWORDS = [
     "Parukeri", "Butiku", "Sukin", "Farmaci", "Spa", "Qender", "Sallon",
@@ -22,6 +22,12 @@ HARDCODED_BUSINESS_KEYWORDS = [
 DEFAULT_SURNAMES = [
     "Golaj", "Gashi", "Krasniqi", "Berisha", "Hoxha",
     "Leka", "Prifti", "Dibra", "Marku", "Kola",
+]
+DEFAULT_FIRST_NAMES = [
+    "Arlind", "Agron", "Besnik", "Driton", "Erion", "Fatmir", "Gent",
+    "Ilir", "Jetmir", "Kujtim", "Lulzim", "Marigona", "Natasha", "Olta",
+    "Pranvera", "Rozafa", "Valbona", "Adrian", "Blerta", "Elona",
+    "Flutura", "Gentiana", "Hana", "Jonida", "Klara", "Liridon",
 ]
 
 HARDCODED_RULES_SUMMARY = [
@@ -32,6 +38,7 @@ HARDCODED_RULES_SUMMARY = [
     "Pikë në emër (arlind.bikliqi) → Arlind Bikliqi",
     "Kapitalizon çdo fjalë",
     "Një fjalë pa mbiemër → shton mbiemër random nga lista juaj",
+    "Vetëm numra / telefon → emër + mbiemër random",
 ]
 
 
@@ -88,14 +95,82 @@ def apply_separators(text: str) -> str:
 
 
 def apply_dot_split(text: str) -> str:
+    """Pikë vetëm për emra (arlind.bikliqi), jo numra (114.114)."""
     if "." not in text:
         return text
     parts = [p.strip() for p in text.split(".") if p.strip()]
     if not parts:
         return text
-    if all(" " not in p for p in parts):
+    if all(
+        " " not in p and re.fullmatch(r"[a-zA-Zà-žÀ-ŽëËçÇ]+", p, re.IGNORECASE)
+        for p in parts
+    ):
         return " ".join(capitalize_word(p) for p in parts)
     return text
+
+
+def _is_blank_value(value) -> bool:
+    if value is None:
+        return True
+    try:
+        import pandas as pd
+
+        if isinstance(value, float) and pd.isna(value):
+            return True
+    except ImportError:
+        pass
+    s = str(value).strip()
+    return not s or s.lower() in ("nan", "none")
+
+
+def _is_numeric_only_value(value) -> bool:
+    """Numra, ID, telefona — zëvendësohen me emër + mbiemër random."""
+    if value is None:
+        return False
+    try:
+        import pandas as pd
+
+        if isinstance(value, float) and pd.isna(value):
+            return False
+    except ImportError:
+        pass
+    if isinstance(value, (int, float)):
+        return True
+
+    s = str(value).strip()
+    if not s:
+        return False
+    if re.fullmatch(r"\d+\.0+", s):
+        return True
+
+    compact = re.sub(r"[\s.\-+(),/\\|]", "", s)
+    return compact.isdigit() and len(compact) >= 1
+
+
+def _random_full_name(surnames: list) -> str:
+    first = random.choice(DEFAULT_FIRST_NAMES)
+    if not surnames:
+        return first
+    surname = random.choice(surnames)
+    if len(surnames) > 1:
+        attempts = 0
+        while surname.lower() == first.lower() and attempts < 8:
+            surname = random.choice(surnames)
+            attempts += 1
+    return f"{first} {surname}"
+
+
+def _name_words(text: str) -> list[str]:
+    """Fjalë të vlefshme emri — pa numra, simbole, pika."""
+    words = []
+    for raw in text.split():
+        w = raw.strip(".")
+        if not w or w.isdigit() or re.fullmatch(r"\d+\.?\d*", w):
+            continue
+        if not re.search(r"[a-zA-Zà-žÀ-Ž]", w):
+            continue
+        words.append(capitalize_word(w))
+    return words
 
 
 def build_symbol_pattern() -> re.Pattern:
@@ -105,20 +180,13 @@ def build_symbol_pattern() -> re.Pattern:
 def clean_name_from_rules(value, rules: dict | None) -> str:
     surnames = get_surnames_from_settings(rules)
 
-    if value is None:
+    if _is_blank_value(value):
         return ""
-    try:
-        import pandas as pd
 
-        if isinstance(value, float) and pd.isna(value):
-            return ""
-    except ImportError:
-        pass
+    if _is_numeric_only_value(value):
+        return _random_full_name(surnames)
 
     original = str(value).strip()
-    if not original or original.lower() in ("nan", "none"):
-        return ""
-
     if contains_business_keyword(original):
         return f"Biznes: {original}"
 
@@ -126,10 +194,12 @@ def clean_name_from_rules(value, rules: dict | None) -> str:
     text = apply_dot_split(text)
     text = build_symbol_pattern().sub(" ", text)
     text = re.sub(r"\s+", " ", text).strip()
-    if not text:
-        return ""
+    if not text or _is_numeric_only_value(text):
+        return _random_full_name(surnames)
 
-    words = [capitalize_word(w) for w in text.split()]
+    words = _name_words(text)
+    if not words:
+        return _random_full_name(surnames)
     if len(words) == 1:
         if surnames:
             return f"{words[0]} {random.choice(surnames)}".strip()

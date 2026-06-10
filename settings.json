@@ -1,332 +1,374 @@
 {
   "business_categories": {
+    "4G": [
+      "t-shirt"
+    ],
+    "A Fashion": [
+      "bluze",
+      "t-shirt",
+      "tuta"
+    ],
+    "Activecorner": [
+      "Dekor flamuj"
+    ],
+    "AJLA ONLINE": [
+      "bluze",
+      "pantollona"
+    ],
+    "AM ONLINE1": [
+      "bluze",
+      "kemishe",
+      "veshje"
+    ],
+    "AM ONLINE2": [
+      "kemishe"
+    ],
+    "AM ONLINE3": [
+      "kemishe",
+      "tuta",
+      "veshje"
+    ],
+    "AM ONLINE4": [
+      "bluze"
+    ],
+    "AM ONLINE5": [
+      "bluze",
+      "kemishe",
+      "veshje"
+    ],
+    "Americanshoppingonline": [
+      "suplimente",
+      "t-shirt",
+      "tuta",
+      "veshje"
+    ],
+    "Amra Kids": [
+      "bluze",
+      "mbulese"
+    ],
+    "Andrra Online": [
+      "fasho lidhese",
+      "krem",
+      "shampo",
+      "suplimente"
+    ],
+    "ARBI": [
+      "korset",
+      "t-shirt",
+      "tekstil",
+      "tuta"
+    ],
+    "Aroma Dream Kosova": [
+      "aksesore aromatizues"
+    ],
+    "Avia Ferizaj": [
+      "pantollona"
+    ],
+    "Avia Fushe Kosove": [
+      "bluze",
+      "tuta",
+      "fustan",
+      "veshje"
+    ],
+    "Babyshop Maid": [
+      "veshje"
+    ],
+    "Bajgora": [
+      "vegel pune"
+    ],
+    "Beauty": [
+      "aksesore"
+    ],
+    "Berto Underwear": [
+      "bluze"
+    ],
+    "BESI": [
+      "veshje"
+    ],
+    "Biokozmetika": [
+      "krem"
+    ],
+    "Blejprejshpiskozmetik": [
+      "aksesore"
+    ],
+    "Blejprejshpiz": [
+      "aksesore"
+    ],
+    "Bluetex": [
+      "tuta"
+    ],
+    "Bosforidesign": [
+      "aksesore",
+      "korset"
+    ],
+    "Buna": [
+      "bluze",
+      "veshje"
+    ],
+    "Butiku Albi": [
+      "bluze",
+      "fund",
+      "fustan",
+      "kemishe",
+      "pantollona",
+      "t-shirt",
+      "tuta",
+      "veshje"
+    ],
+    "Butiku Arti": [
+      "bluze"
+    ],
     "Butiku Edi": [
       "krem"
     ],
     "Butiku Enisi": [
       "bluze",
       "fustan",
+      "t-shirt",
       "tuta"
     ],
-    "Andrra Online": [
-      "suplimente",
-      "shampo",
+    "Butiku Erdi": [
+      "bluze",
+      "kemishe",
+      "veshje"
+    ],
+    "Butiku Lumi": [
+      "bluze"
+    ],
+    "Butiku Nela": [
+      "tuta"
+    ],
+    "Butiku Rina": [
+      "aksesore",
+      "bluze",
+      "mbulese",
+      "t-shirt",
+      "tuta",
+      "veshje"
+    ],
+    "Butiku Zojzi": [
+      "bluze",
+      "kemishe",
+      "pantollona"
+    ],
+    "Butiku77": [
+      "bluze"
+    ],
+    "butikuLF": [
+      "bluze"
+    ],
+    "Ck Group": [
+      "vegel pune"
+    ],
+    "CLOTHINGSV": [
+      "bluze",
+      "kemishe"
+    ],
+    "Cozy": [
+      "mbulese"
+    ],
+    "DC F": [
+      "bluze"
+    ],
+    "DC SH": [
+      "bluze"
+    ],
+    "DhurataIme": [
+      "aksesore"
+    ],
+    "DIMAL FASHION": [
+      "bluze",
+      "pantollona"
+    ],
+    "DONA DRESS": [
+      "pantollona",
+      "tuta",
+      "veshje"
+    ],
+    "Donacenter": [
+      "bluze",
+      "mbulese"
+    ],
+    "DonikaLOCI": [
+      "korset"
+    ],
+    "DORASHOP": [
+      "fasho lidhese",
       "krem"
     ],
-    "KASTRATI FASHION": [
+    "DriloniSportswearr": [
+      "bluze"
+    ],
+    "DUA": [
       "bluze",
+      "veshje"
+    ],
+    "DUA EYEWEAR": [
+      "aksesore"
+    ],
+    "DYQANISHOP": [
+      "aksesore",
+      "aksesore aromatizues",
+      "aksesore depilatore",
+      "aksesore kufje",
+      "aksesore mask",
+      "aksesore maska",
+      "aksesore rrota",
+      "aksesore syze",
+      "aksesore varese",
+      "aparat per ngjyrosje",
+      "drejtuese per shpine",
+      "jastek ortopedik",
+      "jastek per qafe",
+      "krem",
+      "kufje digjitale",
+      "loder",
+      "mbulese",
+      "pastrues gypi",
+      "perde magnetike",
+      "prerese pllake",
+      "raft kendor",
+      "raft organizues",
+      "set tushi",
+      "shampo",
+      "shtrenguese per gjunje",
+      "shtypese qeliku",
+      "spoiler",
+      "sprej polir",
+      "suplimente",
+      "ulese",
+      "vegel pune",
+      "veshje"
+    ],
+    "Eddshoes": [
+      "atlete",
+      "kepuce"
+    ],
+    "eerrzzaa": [
+      "bluze",
+      "tuta"
+    ],
+    "Enes2": [
+      "mbulese"
+    ],
+    "ENMODA": [
+      "bluze",
+      "pantollona",
+      "veshje"
+    ],
+    "ERshoes": [
+      "shapka"
+    ],
+    "FASHIONA": [
+      "bluze",
+      "fund",
+      "fustan",
+      "kemishe",
+      "pantollona",
+      "t-shirt",
       "tuta",
       "veshje",
-      "fustan",
-      "pantollona",
-      "fund",
-      "kemishe",
-      "xhakete"
+      "xhakete",
+      "xhup"
     ],
-    "RonStoreks": [
-      "mbulese",
-      "mbulese divani"
+    "FLETA SHOP": [
+      "aksesore",
+      "fasho lidhese",
+      "krem",
+      "suplimente"
+    ],
+    "G002": [
+      "atlete"
+    ],
+    "G002FR": [
+      "atlete"
+    ],
+    "Gafonline": [
+      "bluze"
+    ],
+    "Gfonline": [
+      "bluze"
+    ],
+    "Gjitheqka Store Online": [
+      "vegel pune"
     ],
     "Goldenshoes": [
       "veshje",
       "kepuce",
       "atlete"
     ],
-    "Regina": [
-      "veshje"
-    ],
-    "Enes2": [
-      "mbulese"
-    ],
-    "Mari Online": [
-      "veshje"
-    ],
-    "LUNA MODA": [
-      "veshje",
-      "bluze"
-    ],
-    "DUA": [
-      "bluze"
-    ],
-    "Porosidiva": [
-      "bluze"
-    ],
-    "Plus Tekstil": [
-      "bluze"
-    ],
-    "AM ONLINE1": [
-      "bluze",
-      "kemishe"
-    ],
-    "Perfect Shop": [
-      "mbulese",
-      "mbulese divani"
-    ],
-    "ZONE": [
-      "fasho lidhese",
-      "aksesore",
-      "aksesore syze"
-    ],
-    "ZONE1": [
-      "Loder rosaku",
-      "aksesore",
-      "pllaka celiku",
-      "veshje"
-    ],
-    "ARBI": [
-      "t-shirt",
-      "korset",
-      "bodi",
-      "tekstil"
-    ],
-    "SHOPONLINE": [
-      "suplimente",
-      "fasho lidhese",
-      "krem"
-    ],
-    "FLETA SHOP": [
-      "suplimente",
-      "krem",
+    "Granko1": [
       "aksesore"
     ],
-    "Rreth Femrave": [
-      "bluze"
+    "GT-01": [
+      "bluze",
+      "pantollona",
+      "tuta",
+      "veshje"
     ],
-    "INFINITYSHOP": [
-      "suplimente",
-      "krem",
-      "fasho lidhese"
+    "HALL OF FAME SHOP": [
+      "bluze",
+      "tuta"
     ],
-    "Sara Shop Veshje Islame": [
+    "HOMECARCAFET": [
       "mbulese",
-      "veshje",
-      "bluze"
+      "mbulese divani"
     ],
     "HomeTekstile - Sara Shop": [
       "mbulese",
       "mbulese divani"
     ],
-    "R.STORE": [
-      "bluze"
-    ],
-    "R.STORE1": [
-      "bluze"
-    ],
-    "MARMO": [
-      "bluze",
-      "veshje",
-      "kemishe"
-    ],
-    "FASHIONA": [
-      "pantollona",
-      "bluze",
-      "fustan",
-      "tuta",
-      "veshje",
-      "fund",
-      "kemishe",
-      "xhakete",
-      "t-shirt",
-      "xhup"
-    ],
-    "ENMODA": [
-      "bluze",
-      "veshje"
-    ],
-    "CLOTHINGSV": [
-      "bluze"
-    ],
-    "Lux Aksesore": [
-      "aksesore syze"
-    ],
-    "janinafashionstore": [
-      "bluze"
-    ],
-    "DYQANISHOP": [
-      "aksesore depilatore",
-      "shampo",
-      "sprej polir",
-      "shtypese qeliku",
-      "perde magnetike",
-      "aksesore",
-      "pastrues gypi",
-      "mbulese",
-      "aksesore aromatizues",
-      "aksesore mask",
-      "aksesore maska",
-      "aksesore syze",
-      "aparat per ngjyrosje",
-      "spoiler",
-      "raft organizues",
+    "INFINITYSHOP": [
+      "fasho lidhese",
       "krem",
-      "aksesore varese",
-      "vegel pune"
-    ],
-    "SOLEMI01": [
-      "aksesore",
-      "vegel pune",
-      "riparues muri",
-      "prerese pllake",
-      "shampo",
-      "aksesore gersher",
-      "aksesore kufje",
-      "mbulese",
-      "aksesore varese",
-      "loder",
-      "pastrues gypi",
-      "arke",
-      "pomp shatervani"
-    ],
-    "LEA FASHION": [
-      "bluze"
-    ],
-    "NOVA": [
-      "veshje"
-    ],
-    "DIMAL FASHION": [
-      "veshje"
-    ],
-    "DONA DRESS": [
-      "tuta"
-    ],
-    "Meral - Women Store": [
-      "mbulese",
-      "bluze"
-    ],
-    "ToniOnline01": [
-      "loder",
-      "aksesore",
       "suplimente"
-    ],
-    "Buna": [
-      "bluze"
-    ],
-    "Lorifashion1": [
-      "bluze",
-      "tuta",
-      "pantollona"
-    ],
-    "LuxuryFashion": [
-      "pantollona",
-      "bluze",
-      "fustan",
-      "tuta",
-      "veshje",
-      "fund",
-      "kemishe",
-      "xhakete"
-    ],
-    "Avia Ferizaj": [
-      "pantollona"
-    ],
-    "SECOND HAND KS": [
-      "veshje"
-    ],
-    "NOIRCORP1": [
-      "Fustan"
-    ],
-    "MOB": [
-      "Drite led",
-      "Paisje per ushtrime"
-    ],
-    "A Fashion": [
-      "bluze",
-      "tuta",
-      "t-shirt"
-    ],
-    "butikuLF": [
-      "bluze"
-    ],
-    "Butiku Erdi": [
-      "bluze"
-    ],
-    "Simply": [
-      "bluze"
-    ],
-    "Perla Store": [
-      "bluze"
-    ],
-    "ITECH": [
-      "aksesore"
-    ],
-    "Americanshoppingonline": [
-      "suplimente"
-    ],
-    "4G": [
-      "t-shirt"
-    ],
-    "Retro Home": [
-      "mbulese divani"
     ],
     "Ipek Kosova": [
       "bluze"
     ],
-    "eerrzzaa": [
+    "Istanbul boutique": [
       "bluze"
     ],
-    "Butiku Rina": [
-      "t-shirt",
-      "mbulese",
-      "bluze",
+    "ITECH": [
       "aksesore",
-      "veshje"
+      "tuta"
     ],
-    "Online1": [
-      "aksesore"
-    ],
-    "Butiku Lumi": [
-      "bluze"
-    ],
-    "Bosforidesign": [
-      "aksesore"
-    ],
-    "Butiku Zojzi": [
-      "bluze"
-    ],
-    "LUNA CENTER": [
-      "bluze"
-    ],
-    "Maxx": [
+    "janinafashionstore": [
       "bluze",
-      "pantollona",
-      "veshje",
-      "kemishe"
+      "pantollona"
     ],
-    "Butiku Albi": [
-      "tuta",
-      "fustan",
-      "pantollona",
+    "Joraonline": [
+      "mbulese divani"
+    ],
+    "Kacandolli": [
+      "Aksesore"
+    ],
+    "KASTRATI FASHION": [
       "bluze",
-      "veshje",
       "fund",
-      "kemishe"
-    ],
-    "Granko1": [
-      "aksesore"
-    ],
-    "LentiLPP": [
-      "bluze",
+      "fustan",
+      "kemishe",
       "pantollona",
       "tuta",
+      "veshje",
+      "xhakete"
+    ],
+    "Kosbiotics": [
+      "suplimente"
+    ],
+    "LabelNue1": [
+      "bluze"
+    ],
+    "LEA FASHION": [
+      "bluze",
       "veshje"
     ],
-    "Muki3": [
-      "mbulese"
-    ],
-    "Amra Kids": [
-      "mbulese"
-    ],
-    "HOMECARCAFET": [
-      "mbulese"
-    ],
-    "Cozy": [
-      "mbulese"
-    ],
-    "Butiku Arti": [
+    "LeeAndrra": [
       "bluze"
     ],
-    "Butiku77": [
-      "bluze"
+    "LeniShoes2": [
+      "atlete",
+      "kepuce"
     ],
     "Lenti": [
       "bluze",
@@ -334,72 +376,311 @@
       "t-shirt",
       "veshje"
     ],
-    "AM ONLINE3": [
-      "kemishe"
+    "LENTI ÇAGLLAVIC": [
+      "t-shirt",
+      "veshje"
     ],
-    "AM ONLINE4": [
+    "LentiLF": [
+      "bluze"
+    ],
+    "LentiLPP": [
+      "bluze",
+      "mbulese",
+      "pantollona",
+      "tuta",
+      "veshje"
+    ],
+    "Letti7": [
       "bluze"
     ],
     "LettiFashion": [
-      "Veshje",
       "bluze",
+      "kemishe",
+      "t-shirt",
       "tuta",
-      "t-shirt"
+      "Veshje"
     ],
-    "LENTI ÇAGLLAVIC": [
-      "veshje"
-    ],
-    "GT-01": [
-      "bluze",
-      "pantollona",
-      "veshje"
-    ],
-    "Kosbiotics": [
-      "suplimente"
-    ],
-    "Onlin_nora1": [
-      "tuta"
-    ],
-    "MARBLE": [
-      "aksesore"
-    ],
-    "MAONLINE": [
-      "aksesore"
-    ],
-    "Beauty": [
-      "aksesore"
-    ],
-    "Niki Tekstil": [
-      "bluze"
-    ],
-    "LZAN": [
-      "bluze"
-    ],
-    "DonikaLOCI": [
-      "korset"
-    ],
-    "Butiku Nela": [
-      "tuta"
-    ],
-    "AM ONLINE5": [
-      "veshje",
-      "bluze",
+    "LFK": [
       "kemishe"
-    ],
-    "BESI": [
-      "veshje"
     ],
     "Lori Fashion": [
       "bluze"
     ],
+    "Lorifashion1": [
+      "bluze",
+      "pantollona",
+      "tuta"
+    ],
+    "LORIFASHION2": [
+      "bluze",
+      "fustan",
+      "tuta",
+      "veshje"
+    ],
+    "LUNA CENTER": [
+      "bluze",
+      "kemishe",
+      "tuta",
+      "veshje"
+    ],
+    "LUNA MODA": [
+      "bluze",
+      "veshje"
+    ],
+    "Lux Aksesore": [
+      "aksesore syze"
+    ],
+    "LuxuryFashion": [
+      "bluze",
+      "fund",
+      "fustan",
+      "kemishe",
+      "pantollona",
+      "tuta",
+      "veshje",
+      "xhakete"
+    ],
+    "LZAN": [
+      "bluze"
+    ],
+    "MallofBallkan": [
+      "aksesore karikues",
+      "Drite led",
+      "loder",
+      "mbulese",
+      "paisje per ushtrime",
+      "triciklet"
+    ],
+    "MAONLINE": [
+      "aksesore"
+    ],
+    "Marabella.Kosova": [
+      "aksesore",
+      "aksesore syze"
+    ],
+    "MARBLE": [
+      "aksesore"
+    ],
+    "Mari Online": [
+      "veshje"
+    ],
+    "MARMO": [
+      "bluze",
+      "kemishe",
+      "tuta",
+      "veshje"
+    ],
+    "Maxx": [
+      "bluze",
+      "kemishe",
+      "pantollona",
+      "veshje"
+    ],
+    "Maya jewels": [
+      "aksesore"
+    ],
+    "Mbulesa Dekorative1": [
+      "mbulese divani"
+    ],
+    "Meral - Women Store": [
+      "bluze",
+      "mbulese"
+    ],
+    "MIRI": [
+      "veshje"
+    ],
+    "MOB": [
+      "Drite led",
+      "Paisje per ushtrime"
+    ],
+    "Modashoes": [
+      "atlete",
+      "kepuce"
+    ],
+    "Muki3": [
+      "mbulese"
+    ],
+    "NEO": [
+      "aksesore"
+    ],
+    "Nesa Shop": [
+      "atlete"
+    ],
+    "Niki Tekstil": [
+      "bluze"
+    ],
+    "NOIRCORP1": [
+      "bluze",
+      "Fustan"
+    ],
+    "NOVA": [
+      "pantollona",
+      "veshje"
+    ],
+    "Nyxonline": [
+      "aksesore"
+    ],
+    "Onlin_nora1": [
+      "tuta",
+      "veshje"
+    ],
+    "Online1": [
+      "aksesore"
+    ],
     "Onlineshop2": [
       "mbulese"
     ],
-    "Gfonline": [
+    "Perfect Shop": [
+      "aksesore",
+      "mbulese",
+      "mbulese divani"
+    ],
+    "Perla Store": [
+      "bluze",
+      "kemishe"
+    ],
+    "PIKA01": [
+      "Kemishe",
+      "bluze",
+      "xhup"
+    ],
+    "Plus Tekstil": [
+      "bluze",
+      "pantollona",
+      "veshje"
+    ],
+    "Porosidiva": [
+      "bluze",
+      "pantollona"
+    ],
+    "Produkte 123": [
+      "krem",
+      "suplimente"
+    ],
+    "Punimet e Nanës": [
+      "Aksesore"
+    ],
+    "R.STORE": [
+      "bluze",
+      "pantollona"
+    ],
+    "R.STORE1": [
+      "bluze",
+      "tuta"
+    ],
+    "Regina": [
+      "pantollona",
+      "veshje"
+    ],
+    "ReOnline": [
+      "mbulese"
+    ],
+    "Retro Home": [
+      "mbulese divani"
+    ],
+    "RonStoreks": [
+      "mbulese",
+      "mbulese divani"
+    ],
+    "Rreth Femrave": [
       "bluze"
     ],
-    "AM ONLINE2": [
+    "Runis": [
+      "mbulese"
+    ],
+    "Sara Shop Veshje Islame": [
+      "bluze",
+      "mbulese",
+      "pantollona",
+      "veshje"
+    ],
+    "SARASHOP MODEST": [
+      "bluze",
+      "fustan",
+      "tuta",
+      "veshje"
+    ],
+    "SECOND HAND KS": [
+      "bluze",
+      "pantollona",
+      "tuta",
+      "veshje"
+    ],
+    "SHOPONLINE": [
+      "fasho lidhese",
+      "krem",
+      "suplimente"
+    ],
+    "Simply": [
+      "bluze",
       "kemishe"
+    ],
+    "SIVEGETA": [
+      "triciklet",
+      "vegel pune"
+    ],
+    "SOLEMI01": [
+      "aksesore",
+      "aksesore gersher",
+      "aksesore karikues",
+      "aksesore kufje",
+      "aksesore mask",
+      "aksesore qels",
+      "aksesore syze",
+      "aksesore varese",
+      "aparat per ngjyrosje",
+      "arke",
+      "drejtuese per shpine",
+      "drite led",
+      "jastek ortopedik",
+      "jastek per qafe",
+      "loder",
+      "mbulese",
+      "pastrues gypi",
+      "pomp shatervani",
+      "prerese pllake",
+      "raft kendore",
+      "riparues muri",
+      "set tushi",
+      "shampo",
+      "shtypese qeliku",
+      "vegel pune",
+      "veshje"
+    ],
+    "Tarashop SAS_veshjeislame": [
+      "mbulese",
+      "t-shirt"
+    ],
+    "ToniOnline01": [
+      "aksesore",
+      "aksesore blender",
+      "blender dore",
+      "drite led",
+      "loder",
+      "raft plastike",
+      "suplimente",
+      "veshje"
+    ],
+    "Toponline": [
+      "aksesore",
+      "aksesore depilatore",
+      "drejtuese per shpine",
+      "korset",
+      "krem",
+      "loder",
+      "loder rosaku",
+      "mikrofon argetues",
+      "mini flashlight",
+      "ngjites dy komponentesh",
+      "pastrues gjamash",
+      "raft plastike",
+      "top fleksibil"
+    ],
+    "TREGUONLINEALB": [
+      "Aksesore"
+    ],
+    "UNIKID": [
+      "Veshje"
     ],
     "V D": [
       "tuta",
@@ -411,162 +692,32 @@
       "kemishe",
       "xhakete"
     ],
-    "Marabella.Kosova": [
-      "aksesore",
-      "aksesore syze"
-    ],
-    "MIRI": [
+    "Xafa Online": [
       "veshje"
-    ],
-    "G002": [
-      "atlete"
-    ],
-    "G002FR": [
-      "atlete"
-    ],
-    "Donacenter": [
-      "bluze"
-    ],
-    "Biokozmetika": [
-      "krem"
-    ],
-    "LeniShoes2": [
-      "atlete",
-      "kepuce"
-    ],
-    "ERshoes": [
-      "shapka"
-    ],
-    "SIVEGETA": [
-      "triciklet"
-    ],
-    "MallofBallkan": [
-      "Drite led",
-      "triciklet"
-    ],
-    "Blejprejshpiskozmetik": [
-      "aksesore"
-    ],
-    "Aroma Dream Kosova": [
-      "aksesore aromatizues"
-    ],
-    "Mbulesa Dekorative1": [
-      "mbulese divani"
-    ],
-    "LabelNue1": [
-      "bluze"
-    ],
-    "LeeAndrra": [
-      "bluze"
-    ],
-    "Modashoes": [
-      "atlete",
-      "kepuce"
-    ],
-    "Eddshoes": [
-      "atlete",
-      "kepuce"
-    ],
-    "ReOnline": [
-      "mbulese"
-    ],
-    "AJLA ONLINE": [
-      "bluze"
-    ],
-    "Berto Underwear": [
-      "bluze"
-    ],
-    "DORASHOP": [
-      "krem"
-    ],
-    "DUA EYEWEAR": [
-      "aksesore"
-    ],
-    "HALL OF FAME SHOP": [
-      "tuta"
-    ],
-    "Babyshop Maid": [
-      "veshje"
-    ],
-    "Joraonline": [
-      "mbulese divani"
-    ],
-    "Gjitheqka Store Online": [
-      "vegel pune"
-    ],
-    "Tarashop SAS_veshjeislame": [
-      "mbulese"
-    ],
-    "Istanbul boutique": [
-      "bluze"
-    ],
-    "Kacandolli": [
-      "Aksesore"
-    ],
-    "PIKA01": [
-      "Kemishe",
-      "bluze",
-      "xhup"
-    ],
-    "Gafonline": [
-      "bluze"
-    ],
-    "TREGUONLINEALB": [
-      "Aksesore"
-    ],
-    "Produkte 123": [
-      "krem"
-    ],
-    "Nesa Shop": [
-      "atlete"
-    ],
-    "Punimet e Nanës": [
-      "Aksesore"
-    ],
-    "DriloniSportswearr": [
-      "bluze"
-    ],
-    "DC SH": [
-      "Bluze"
     ],
     "ZazaKosova": [
       "aksesore syze"
     ],
-    "Bluetex": [
-      "tuta"
+    "ZONE": [
+      "aksesore",
+      "aksesore syze",
+      "drite led",
+      "fasho lidhese"
     ],
-    "DhurataIme": [
-      "aksesore"
+    "ZONE1": [
+      "aksesore",
+      "kosh per mbeturina",
+      "Loder rosaku",
+      "pllaka celiku",
+      "raft plastike",
+      "veshje"
     ],
-    "Maya jewels": [
-      "aksesore"
-    ],
-    "NEO": [
-      "aksesore"
-    ],
-    "Activecorner": [
-      "Dekor flamuj"
-    ],
-    "Blejprejshpiz": [
-      "aksesore"
-    ],
-    "DC F": [
+    "LKK R": [
+      "komplete",
+      "fustan",
+      "tuta",
+      "veshje",
       "bluze"
-    ],
-    "UNIKID": [
-      "Veshje"
-    ],
-    "Bajgora": [
-      "vegel pune"
-    ],
-    "LentiLF": [
-      "bluze"
-    ],
-    "Letti7": [
-      "bluze"
-    ],
-    "Nyxonline": [
-      "aksesore"
     ]
   },
   "surnames": [
@@ -716,6 +867,16 @@
     "krem": "krem",
     "fustan": "fustan",
     "bluze": "bluze",
+    "maic": "bluze",
+    "maice": "bluze",
+    "maica": "bluze",
+    "dopsuese": "bluze",
+    "body": "bluze",
+    "shtrengesa": "bluze",
+    "qerpik": "aksesore",
+    "tekstil": "mbulese",
+    "komplet": "mbulese",
+    "komplete": "mbulese",
     "shampo": "shampo",
     "suplimente": "suplimente",
     "aksesore": "aksesore",
@@ -733,20 +894,19 @@
     "cante": "cante",
     "syze": "aksesore syze",
     "kmishe": "kemishe",
-    "komplet": "veshje",
     "set": "veshje",
     "sete": "veshje",
     "t-shirt": "t-shirt",
     "kemishe": "kemishe",
     "bodi": "bodi",
     "korset": "korset",
-    "tekstil": "tekstil",
     "fasho lidhese": "fasho lidhese",
-    "Loder rosaku": "Loder rosaku",
+    "Loder rosaku": "loder",
     "pllaka celiku": "pllaka celiku",
     "aksesore depilatore": "aksesore",
     "sprej polir": "suplimente",
-    "shtypese qeliku": "pajisje",
+    "shtypese qeliku": "shtypese qeliku",
+    "shtypes qeliku": "shtypese qeliku",
     "perde magnetike": "pajisje",
     "pastrues gypi": "pajisje",
     "aksesore aromatizues": "aksesore",
@@ -762,11 +922,22 @@
     "aksesore kufje": "aksesore",
     "arke": "pajisje",
     "pomp shatervani": "pajisje",
-    "Drite led": "pajisje",
+    "Drite led": "drite led",
+    "drite led": "drite led",
     "Paisje per ushtrime": "pajisje",
     "mbulese divani": "mbulese",
     "aksesore syze": "aksesore",
-    "loder": "pajisje",
+    "loder": "loder",
+    "lodra": "loder",
+    "shtrenguese per gjunje": "shtrenguese per gjunje",
+    "shtrenguese": "shtrenguese per gjunje",
+    "jastek per qafe": "jastek per qafe",
+    "jastek ortopedik": "jastek ortopedik",
+    "jastek": "jastek per qafe",
+    "drejtuese per shpine": "drejtuese per shpine",
+    "drejtuese": "drejtuese per shpine",
+    "aksesore qels": "aksesore qels",
+    "set tushi": "set tushi",
     "fustana": "fustan",
     "fustane": "fustan",
     "fustanin": "fustan",

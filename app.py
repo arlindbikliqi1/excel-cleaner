@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import random
 import re
 from datetime import datetime
 from pathlib import Path
@@ -61,9 +62,13 @@ DOWNLOAD_FOLDER.mkdir(exist_ok=True)
 DATA_DIR.mkdir(exist_ok=True)
 
 TOKEN_PATTERN = re.compile(r"[a-z0-9à-ž]+", re.IGNORECASE)
+TOKEN_STOP_WORDS = frozenset({"per", "dhe", "me", "te", "ne", "nga", "nje", "pa", "se"})
+SIZE_TOKENS = frozenset({"xs", "s", "m", "l", "xl", "xxl", "xxxl", "2xl", "3xl", "4xl"})
 SHORT_KEYWORD_MAX_LEN = 3
 MIN_CATEGORY_MATCH_SCORE = 55
+MIN_CONFIDENT_MATCH_SCORE = 110
 MIN_PREFIX_TOKEN_LEN = 4
+MIN_STRONG_PREFIX_LEN = 5
 MIN_PREFIX_CATEGORY_LEN = 5
 
 # Variante shkrimi → kategori standarde (si lista manuale)
@@ -77,6 +82,20 @@ CATEGORY_ALIASES = {
     "trenerka": "tuta",
     "trenerk": "tuta",
     "sete": "veshje",
+    "lodra": "loder",
+    "lodrat": "loder",
+    "lodër": "loder",
+    "maic": "bluze",
+    "maice": "bluze",
+    "maica": "bluze",
+    "dopsuese": "bluze",
+    "body": "bluze",
+    "shtrengesa": "bluze",
+    "brus": "bluze",
+    "qerpik": "aksesore",
+    "tekstil": "mbulese",
+    "komplet": "mbulese",
+    "komplete": "mbulese",
 }
 
 app = Flask(__name__)
@@ -108,6 +127,12 @@ def normalize_product_text(text: str) -> str:
     return re.sub(r"\s+", " ", str(text).strip().lower())
 
 
+def _product_tokens(normalized: str) -> list[str]:
+    """Ndan edhe me - dhe / (p.sh. TEKSTIL-3R, loder/rosaku)."""
+    expanded = normalized.replace("-", " ").replace("/", " ")
+    return TOKEN_PATTERN.findall(expanded)
+
+
 def keyword_matches_product(keyword: str, normalized: str, compact: str, tokens: list) -> bool:
     kw = normalize_product_text(keyword)
     if not kw:
@@ -137,56 +162,40 @@ def _business_category_for_norm(categories: list, target_norm: str) -> str | Non
     return None
 
 
-def _build_category_vocabulary(
-    product_keywords: dict, business_categories: dict
-) -> dict[str, str]:
-    """norm → forma e preferuar e shfaqjes."""
-    vocab: dict[str, str] = {}
+def _pick_business_fallback(business_cats_list: list) -> str:
+    return random.choice(business_cats_list)
 
-    def add(cat: str):
-        if not cat:
-            return
-        text = str(cat).strip()
-        norm = _norm_category(text)
-        if norm and (norm not in vocab or len(text) > len(vocab[norm])):
-            vocab[norm] = text
 
-    for mapped in product_keywords.values():
-        add(mapped)
-    for cats in business_categories.values():
-        for cat in cats:
-            add(cat)
-    for alias, target in CATEGORY_ALIASES.items():
-        norm = _norm_category(target)
-        if norm in vocab:
-            add(vocab[norm])
-    return vocab
+def _finalize_business_category(
+    original: str, result: str, business_cats_list: list
+) -> str:
+    """Output = gjithmonë kategori nga lista e biznesit; kurrë emri origjinal i produktit."""
+    if not business_cats_list:
+        return result
+    if len(business_cats_list) == 1:
+        return business_cats_list[0]
+
+    matched = _business_category_for_norm(business_cats_list, _norm_category(result))
+    if matched:
+        return matched
+
+    # Kurrë mos kthe emrin origjinal të produktit si kategori
+    if _norm_category(result) == _norm_category(original):
+        return _pick_business_fallback(business_cats_list)
+
+    return _pick_business_fallback(business_cats_list)
 
 
 def _meaningful_tokens(tokens: list) -> list:
-    return [t for t in tokens if not t.isdigit() and len(t) >= 2]
+    return [
+        t
+        for t in tokens
+        if not t.isdigit() and len(t) >= 2 and t not in TOKEN_STOP_WORDS and t not in SIZE_TOKENS
+    ]
 
 
 def _apply_category_alias(token_norm: str) -> str:
     return _norm_category(CATEGORY_ALIASES.get(token_norm, token_norm))
-
-
-def _token_to_category_norm(token: str, vocab: dict[str, str]) -> str | None:
-    token_norm = _apply_category_alias(_norm_category(token))
-    if token_norm in vocab:
-        return token_norm
-
-    best_norm = None
-    best_len = 0
-    for norm in vocab:
-        if len(token_norm) < MIN_PREFIX_TOKEN_LEN or len(norm) < MIN_PREFIX_CATEGORY_LEN:
-            continue
-        if norm.startswith(token_norm) or token_norm.startswith(norm):
-            span = min(len(token_norm), len(norm))
-            if span > best_len:
-                best_len = span
-                best_norm = norm
-    return best_norm
 
 
 def _score_category_in_product(category: str, normalized: str, compact: str, tokens: list) -> int:
@@ -194,6 +203,8 @@ def _score_category_in_product(category: str, normalized: str, compact: str, tok
     cat_norm = _norm_category(category)
     if not cat_norm:
         return 0
+    if cat_norm == normalized:
+        return 500 + len(cat_norm)
     cat_compact = cat_norm.replace(" ", "")
     if len(cat_norm) <= SHORT_KEYWORD_MAX_LEN:
         if cat_norm in tokens:
@@ -201,28 +212,148 @@ def _score_category_in_product(category: str, normalized: str, compact: str, tok
         return 0
     score = 0
     if cat_norm in normalized:
-        score = max(score, 120 + len(cat_norm))
+        score = max(score, 450 + len(cat_norm))
     if cat_compact in compact:
-        score = max(score, 110 + len(cat_compact))
+        score = max(score, 190 + len(cat_compact))
     return score
 
 
-def _score_prefix_category_match(category: str, tokens: list) -> int:
-    """P.sh. «pantolla» → pantollona, «pantoll» → pantollona."""
-    cat_norm = _norm_category(category)
-    if len(cat_norm) < MIN_PREFIX_CATEGORY_LEN:
-        return 0
-    best = 0
-    for token in tokens:
-        if len(token) < MIN_PREFIX_TOKEN_LEN:
+def _business_form_for_token(
+    token: str, business_cats_list: list, normalized: str = ""
+) -> str | None:
+    """Gjen kategorinë e biznesit që përputhet me token (emër i plotë, alias ose prefiks)."""
+    token_norm = _apply_category_alias(_norm_category(token))
+    if not token_norm:
+        return None
+
+    direct = _business_category_for_norm(business_cats_list, token_norm)
+    if direct:
+        return direct
+
+    candidates: list[tuple[int, str, str]] = []
+    for cat in business_cats_list:
+        cat_norm = _norm_category(cat)
+        if not cat_norm:
             continue
-        if cat_norm.startswith(token) or token.startswith(cat_norm):
-            best = max(best, 85 + min(len(token), len(cat_norm)))
-        elif len(token) >= MIN_PREFIX_CATEGORY_LEN and (
-            token in cat_norm or cat_norm in token
-        ):
-            best = max(best, 75 + min(len(token), len(cat_norm)))
-    return best
+        span = 0
+        if token_norm == cat_norm:
+            return cat
+        if len(token_norm) >= MIN_STRONG_PREFIX_LEN and len(cat_norm) >= MIN_PREFIX_CATEGORY_LEN:
+            if cat_norm.startswith(token_norm) or token_norm.startswith(cat_norm):
+                span = min(len(token_norm), len(cat_norm))
+            elif len(token_norm) >= 5 and (token_norm in cat_norm or cat_norm in token_norm):
+                span = min(len(token_norm), len(cat_norm))
+        if span > 0:
+            candidates.append((span, cat, cat_norm))
+
+    if not candidates:
+        return None
+
+    if normalized:
+        in_text = [item for item in candidates if item[2] in normalized]
+        if in_text:
+            return max(in_text, key=lambda item: len(item[2]))[1]
+
+    return max(candidates, key=lambda item: item[0])[1]
+
+
+def _token_matches_category(token_norm: str, cat_norm: str) -> int:
+    """Pikë vetëm për përputhje të besueshme token ↔ kategori."""
+    if not token_norm or not cat_norm:
+        return 0
+    if token_norm == cat_norm:
+        return 420 + len(cat_norm)
+    for part in cat_norm.split():
+        if token_norm == part:
+            return 340 + len(part)
+    if len(token_norm) >= MIN_STRONG_PREFIX_LEN and len(cat_norm) >= MIN_PREFIX_CATEGORY_LEN:
+        if cat_norm.startswith(token_norm):
+            return 380 + len(token_norm)
+        if token_norm.startswith(cat_norm):
+            return 370 + len(cat_norm)
+    for part in cat_norm.split():
+        if len(token_norm) >= MIN_STRONG_PREFIX_LEN and len(part) >= MIN_PREFIX_CATEGORY_LEN:
+            if part.startswith(token_norm) or token_norm.startswith(part):
+                return 320 + min(len(token_norm), len(part))
+    if len(token_norm) >= 5 and len(cat_norm) >= 5 and (
+        token_norm in cat_norm or cat_norm in token_norm
+    ):
+        return 300 + min(len(token_norm), len(cat_norm))
+    return 0
+
+
+def _score_business_category_match(
+    category: str, normalized: str, compact: str, tokens: list, meaningful: list
+) -> int:
+    score = _score_category_in_product(category, normalized, compact, tokens)
+    cat_norm = _norm_category(category)
+    for token in meaningful:
+        token_norm = _apply_category_alias(_norm_category(token))
+        score = max(score, _token_matches_category(token_norm, cat_norm))
+    return score
+
+
+def _keyword_to_business_category(
+    keyword: str,
+    mapped_category: str,
+    business_cats_list: list,
+    normalized: str,
+) -> str | None:
+    mapped_norm = _norm_category(mapped_category)
+    business_form = _business_category_for_norm(business_cats_list, mapped_norm)
+    if business_form:
+        return business_form
+    for kw_part in normalize_product_text(keyword).split():
+        business_form = _business_form_for_token(kw_part, business_cats_list, normalized)
+        if business_form:
+            return business_form
+    return None
+
+
+def _resolve_business_category(
+    normalized: str,
+    compact: str,
+    tokens: list,
+    meaningful: list,
+    business_cats_list: list,
+    product_keywords: dict,
+) -> str:
+    """Përputh kategori të biznesit; pa përputhje të besueshme → random."""
+    if len(business_cats_list) == 1:
+        return business_cats_list[0]
+
+    scores: dict[str, int] = {}
+    cat_by_norm = {_norm_category(cat): cat for cat in business_cats_list}
+
+    for cat in business_cats_list:
+        norm = _norm_category(cat)
+        scores[norm] = max(
+            scores.get(norm, 0),
+            _score_business_category_match(cat, normalized, compact, tokens, meaningful),
+        )
+
+    sorted_keywords = sorted(
+        product_keywords.items(),
+        key=lambda item: len(normalize_product_text(item[0])),
+        reverse=True,
+    )
+    for keyword, mapped_category in sorted_keywords:
+        if not keyword_matches_product(keyword, normalized, compact, tokens):
+            continue
+        business_form = _keyword_to_business_category(
+            keyword, mapped_category, business_cats_list, normalized
+        )
+        if not business_form:
+            continue
+        norm = _norm_category(business_form)
+        kw_score = 300 + len(normalize_product_text(keyword))
+        scores[norm] = max(scores.get(norm, 0), kw_score)
+
+    if not scores or max(scores.values()) < MIN_CONFIDENT_MATCH_SCORE:
+        return _pick_business_fallback(business_cats_list)
+
+    best_norm = max(scores, key=lambda norm: scores[norm])
+    return cat_by_norm.get(best_norm) or _pick_business_fallback(business_cats_list)
 
 
 def resolve_product_category(
@@ -232,8 +363,9 @@ def resolve_product_category(
     business_cats_list: list | None = None,
 ) -> str:
     """
-    Nxjerr kategorinë nga emërtimi i produktit (si lista manuale):
-    fjala e parë / fjalëkyçi më i afërt → fustan, bluze, pantollona, krem, etj.
+    Nxjerr kategorinë nga emërtimi i produktit.
+    Biznes i njohur → vetëm kategoritë e tij (të ngjashme ose random).
+    Biznes i panjohur → mbetet emri origjinal (pa kategori globale).
     """
     if product_name is None or (isinstance(product_name, float) and pd.isna(product_name)):
         return ""
@@ -242,69 +374,17 @@ def resolve_product_category(
     if not original or original.lower() in ("nan", "none"):
         return ""
 
-    if not product_keywords:
+    if not business_cats_list:
         return original
 
     normalized = normalize_product_text(original)
     compact = normalized.replace(" ", "")
-    tokens = TOKEN_PATTERN.findall(normalized)
+    tokens = _product_tokens(normalized)
     meaningful = _meaningful_tokens(tokens)
-    vocab = _build_category_vocabulary(product_keywords, business_categories)
 
-    best_norm = None
-    best_score = 0
-
-    # 1) Fjala e parë me kuptim (rregulla kryesore e listës manuale)
-    if meaningful:
-        first_norm = _token_to_category_norm(meaningful[0], vocab)
-        if first_norm:
-            best_norm = first_norm
-            best_score = 500 + len(first_norm)
-
-    # 2) Fjalëkyçe në tekst — më i gjati fiton (p.sh. «mbulese divani», «krem»)
-    sorted_keywords = sorted(
-        product_keywords.items(),
-        key=lambda item: len(normalize_product_text(item[0])),
-        reverse=True,
+    return _resolve_business_category(
+        normalized, compact, tokens, meaningful, business_cats_list, product_keywords
     )
-    for keyword, mapped_category in sorted_keywords:
-        if not keyword_matches_product(keyword, normalized, compact, tokens):
-            continue
-        mapped_norm = _norm_category(mapped_category)
-        kw_norm = normalize_product_text(keyword)
-        score = 300 + len(kw_norm)
-        if meaningful and _norm_category(meaningful[0]) == kw_norm:
-            score += 80
-        if score > best_score:
-            best_score = score
-            best_norm = mapped_norm
-
-    # 3) Emri i kategorisë brenda tekstit (më i gjati fiton)
-    for norm, display in sorted(vocab.items(), key=lambda x: len(x[0]), reverse=True):
-        score = _score_category_in_product(display, normalized, compact, tokens)
-        if score > best_score:
-            best_score = score
-            best_norm = norm
-
-    # 4) Afërsi me prefiks për gabime shkrimi (pantolla → pantollona)
-    for token in meaningful:
-        token_norm = _token_to_category_norm(token, vocab)
-        if not token_norm:
-            continue
-        score = _score_prefix_category_match(vocab[token_norm], [token])
-        if score > best_score:
-            best_score = score
-            best_norm = token_norm
-
-    if not best_norm or best_score < MIN_CATEGORY_MATCH_SCORE:
-        return original
-
-    display = vocab.get(best_norm, best_norm)
-    if business_cats_list:
-        business_form = _business_category_for_norm(business_cats_list, best_norm)
-        if business_form:
-            return business_form
-    return display
 
 
 def get_product_by_business(
@@ -313,6 +393,13 @@ def get_product_by_business(
     business_categories: dict,
     product_keywords: dict,
 ) -> str:
+    if product_name is None or (isinstance(product_name, float) and pd.isna(product_name)):
+        return ""
+
+    original = str(product_name).strip()
+    if not original or original.lower() in ("nan", "none"):
+        return ""
+
     business_cats_list = None
     if business_name is not None and not (
         isinstance(business_name, float) and pd.isna(business_name)
@@ -320,12 +407,16 @@ def get_product_by_business(
         lookup = build_business_lookup(business_categories)
         business_cats_list = lookup.get(normalize_business_name(str(business_name)))
 
-    return resolve_product_category(
+    if not business_cats_list:
+        return original
+
+    result = resolve_product_category(
         product_name,
         product_keywords,
         business_categories,
         business_cats_list,
     )
+    return _finalize_business_category(original, result, business_cats_list)
 
 
 def _norm_header_cell(val) -> str:
@@ -346,6 +437,8 @@ def _classify_header_cell(val) -> str | None:
         or "produkt" in v
         or "emertimi" in v
         or "artikull" in v
+        or v in ("kategori", "kategoria", "kategorite")
+        or "kategori" in v
     ):
         return "produkti"
     if v in ("emri", "klienti", "klient", "recipient"):
@@ -395,6 +488,66 @@ def find_excel_column_mapping(df: pd.DataFrame) -> dict:
             "score": 0,
         }
     return best
+
+
+def _forward_fill_shitesi(df: pd.DataFrame, sh_col: int, data_start: int) -> None:
+    """Excel shpesh ka emrin e shitësit vetëm në rreshtin e parë të grupit."""
+    last = ""
+    for row_idx in range(data_start, len(df)):
+        text = _cell_text(df.iat[row_idx, sh_col])
+        if text:
+            last = text
+        elif last:
+            df.iat[row_idx, sh_col] = last
+
+
+def _shitesi_for_row(df: pd.DataFrame, row_idx: int, sh_col: int, data_start: int) -> str:
+    text = _cell_text(df.iat[row_idx, sh_col])
+    if text:
+        return text
+    for prev in range(row_idx - 1, data_start - 1, -1):
+        text = _cell_text(df.iat[prev, sh_col])
+        if text:
+            return text
+    return ""
+
+
+def _infer_produkti_column(df: pd.DataFrame, mapping: dict) -> int | None:
+    sh_col = mapping["shitesi_col"]
+    pr_col = mapping["pranuesi_col"]
+    data_start = mapping["data_start"]
+    skip = {c for c in (sh_col, pr_col) if c is not None}
+    best_col = None
+    best_score = 0
+    for col_idx in range(df.shape[1]):
+        if col_idx in skip:
+            continue
+        score = 0
+        for row_idx in range(data_start, min(data_start + 200, len(df))):
+            text = _cell_text(df.iat[row_idx, col_idx])
+            if len(text) >= 3:
+                score += min(len(text), 40)
+        if score > best_score:
+            best_score = score
+            best_col = col_idx
+    return best_col if best_score > 0 else None
+
+
+def _produkti_columns(df: pd.DataFrame, mapping: dict) -> list[int]:
+    """Të gjitha kolonat e produktit/kategorisë që duhen zëvendësuar."""
+    cols: set[int] = set()
+    header_row = mapping["header_row"]
+    if header_row is not None:
+        for col_idx in range(df.shape[1]):
+            if _classify_header_cell(df.iat[header_row, col_idx]) == "produkti":
+                cols.add(col_idx)
+    if mapping["produkti_col"] is not None:
+        cols.add(mapping["produkti_col"])
+    if not cols:
+        inferred = _infer_produkti_column(df, mapping)
+        if inferred is not None:
+            cols.add(inferred)
+    return sorted(cols)
 
 
 def _cell_text(val) -> str:
@@ -474,17 +627,24 @@ def transform_excel(filepath: str, settings: dict) -> tuple:
     product_keywords = settings.get("product_keywords", {})
     name_rules = settings.get("name_cleaning_rules") or get_name_cleaning_rules()
 
+    sh_col = mapping["shitesi_col"]
+    data_start = mapping["data_start"]
+    if sh_col is not None:
+        _forward_fill_shitesi(df, sh_col, data_start)
+
     unknown_businesses = collect_unknown_businesses_full(df, mapping, settings)
 
     pr_col = mapping["pranuesi_col"]
-    prod_col = mapping["produkti_col"]
-    sh_col = mapping["shitesi_col"]
-    data_start = mapping["data_start"]
+    produkti_cols = _produkti_columns(df, mapping)
 
     for row_idx in range(data_start, len(df)):
-        shitesi_val = df.iat[row_idx, sh_col] if sh_col is not None else None
+        shitesi_val = _shitesi_for_row(df, row_idx, sh_col, data_start) if sh_col is not None else ""
 
-        if prod_col is not None and _cell_text(shitesi_val):
+        for prod_col in produkti_cols:
+            if not _cell_text(shitesi_val):
+                continue
+            if _is_blank_cell(df.iat[row_idx, prod_col]):
+                continue
             orig_product = df.iat[row_idx, prod_col]
             df.iat[row_idx, prod_col] = get_product_by_business(
                 shitesi_val,

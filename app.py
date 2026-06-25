@@ -48,7 +48,16 @@ from database import (
     verify_admin,
 )
 from name_cleaning import HARDCODED_RULES_SUMMARY, clean_name_from_rules
-from product_training import match_training_category, match_training_category_with_mode, strip_product_noise
+from product_training import (
+    import_training_from_excel,
+    is_reference_training_excel,
+    match_training_category,
+    match_training_category_with_mode,
+    norm_category as canonical_product_category,
+    reload_training_cache,
+    strip_product_noise,
+    _detect_reference_columns,
+)
 
 BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR / "data"
@@ -99,6 +108,9 @@ CATEGORY_ALIASES = {
     "tekstil": "mbulese",
     "komplet": "mbulese",
     "komplete": "mbulese",
+    "fustana": "fustan",
+    "fustane": "fustan",
+    "fustanin": "fustan",
 }
 
 app = Flask(__name__)
@@ -165,6 +177,21 @@ def _business_category_for_norm(categories: list, target_norm: str) -> str | Non
     return None
 
 
+def _beautify_category_output(
+    result: str, business_cats_list: list | None = None
+) -> str:
+    """Formë e pastër e kategorisë — nga lista e biznesit ose kanonike."""
+    if not result:
+        return result
+    cleaned = re.sub(r"\s+", " ", str(result).strip())
+    norm = _norm_category(cleaned)
+    if business_cats_list:
+        matched = _business_category_for_norm(business_cats_list, norm)
+        if matched:
+            return matched
+    return canonical_product_category(cleaned)
+
+
 def _pick_business_fallback(business_cats_list: list) -> str:
     return random.choice(business_cats_list)
 
@@ -193,8 +220,41 @@ def _meaningful_tokens(tokens: list) -> list:
     return [
         t
         for t in tokens
-        if not t.isdigit() and len(t) >= 2 and t not in TOKEN_STOP_WORDS and t not in SIZE_TOKENS
+        if not t.isdigit()
+        and len(t) >= 2
+        and not re.search(r"\d", t)
+        and t not in TOKEN_STOP_WORDS
+        and t not in SIZE_TOKENS
     ]
+
+
+def _direct_business_category_match(
+    normalized: str, tokens: list, meaningful: list, business_cats_list: list
+) -> str | None:
+    """
+    Kategori e biznesit që shfaqet qartë në tekst (fustan, bluze, tuta…).
+    Ka prioritet mbi listën globale DG.
+    """
+    cat_by_norm = {_norm_category(cat): cat for cat in business_cats_list}
+
+    for token in meaningful:
+        for token_norm in (
+            _apply_category_alias(_norm_category(token)),
+            _norm_category(token),
+        ):
+            if token_norm in cat_by_norm:
+                return cat_by_norm[token_norm]
+
+    for cat in sorted(business_cats_list, key=lambda c: len(_norm_category(c)), reverse=True):
+        cat_norm = _norm_category(cat)
+        if len(cat_norm) <= SHORT_KEYWORD_MAX_LEN:
+            continue
+        if cat_norm in normalized:
+            return cat
+        if cat_norm.replace(" ", "") in normalized.replace(" ", ""):
+            return cat
+
+    return None
 
 
 def _apply_category_alias(token_norm: str) -> str:
@@ -327,7 +387,15 @@ def _map_training_to_business(
         if _norm_category(cat) == _norm_category(trained):
             return cat, mode
     form = _business_form_for_token(trained, business_cats_list)
-    return form, mode if form else ""
+    if form:
+        return form, mode
+    # kategori e trajnimit jo në listë — gjej më të afërtin
+    trained_norm = _norm_category(trained)
+    for cat in business_cats_list:
+        cat_norm = _norm_category(cat)
+        if trained_norm in cat_norm or cat_norm in trained_norm:
+            return cat, mode
+    return None, ""
 
 
 def _resolve_business_category(
@@ -343,12 +411,21 @@ def _resolve_business_category(
     if len(business_cats_list) == 1:
         return business_cats_list[0]
 
+    # 0) Kategori e biznesit në tekst (fustan → fustan) — para DG globale
+    direct = _direct_business_category_match(
+        normalized, tokens, meaningful, business_cats_list
+    )
+    if direct:
+        return direct
+
     scores: dict[str, int] = {}
     cat_by_norm = {_norm_category(cat): cat for cat in business_cats_list}
 
-    # 1) Lista DG — përputhje e saktë kthehet menjëherë
+    # 1) Lista DG — vetëm nëse nuk ka përputhje direkte më sipër
     trained_form, train_mode = _map_training_to_business(original or normalized, business_cats_list)
     if trained_form and train_mode == "exact":
+        return trained_form
+    if trained_form and train_mode == "phrase":
         return trained_form
     if trained_form:
         norm = _norm_category(trained_form)
@@ -387,6 +464,72 @@ def _resolve_business_category(
     return cat_by_norm.get(best_norm) or _pick_business_fallback(business_cats_list)
 
 
+def resolve_product_global(product_name, product_keywords: dict) -> str:
+    """Pa biznes: lista DG + fjalëkyçe (jo random)."""
+    if product_name is None or (isinstance(product_name, float) and pd.isna(product_name)):
+        return ""
+
+    original = str(product_name).strip()
+    if not original or original.lower() in ("nan", "none"):
+        return ""
+
+    trained, mode = match_training_category_with_mode(original)
+    if trained:
+        return _beautify_category_output(trained)
+
+    normalized = strip_product_noise(original)
+    compact = normalized.replace(" ", "")
+    tokens = _product_tokens(normalized)
+
+    best_cat = None
+    best_score = 0
+    for keyword, mapped in sorted(
+        product_keywords.items(),
+        key=lambda item: len(normalize_product_text(item[0])),
+        reverse=True,
+    ):
+        if not keyword_matches_product(keyword, normalized, compact, tokens):
+            continue
+        score = len(normalize_product_text(keyword))
+        if len(normalize_product_text(keyword)) <= SHORT_KEYWORD_MAX_LEN:
+            score = MIN_SHORT_KEYWORD_SCORE
+        if score > best_score:
+            best_score = score
+            best_cat = mapped
+
+    return best_cat if best_cat else original
+
+
+def map_product_cell(
+    shitesi_val: str,
+    product_name,
+    business_categories: dict,
+    product_keywords: dict,
+) -> str:
+    """Mapo produktin — me biznes, pa biznes, ose vetëm trajnimi."""
+    if product_name is None or (isinstance(product_name, float) and pd.isna(product_name)):
+        return ""
+
+    original = str(product_name).strip()
+    if not original or original.lower() in ("nan", "none"):
+        return ""
+
+    business_cats_list = None
+    if shitesi_val:
+        lookup = build_business_lookup(business_categories)
+        business_cats_list = lookup.get(normalize_business_name(str(shitesi_val)))
+
+    if business_cats_list:
+        result = get_product_by_business(
+            shitesi_val, product_name, business_categories, product_keywords
+        )
+        return _beautify_category_output(result, business_cats_list)
+
+    return _beautify_category_output(
+        resolve_product_global(product_name, product_keywords)
+    )
+
+
 def resolve_product_category(
     product_name,
     product_keywords: dict,
@@ -396,7 +539,7 @@ def resolve_product_category(
     """
     Nxjerr kategorinë nga emërtimi i produktit.
     Biznes i njohur → vetëm kategoritë e tij (të ngjashme ose random).
-    Biznes i panjohur → mbetet emri origjinal (pa kategori globale).
+    Biznes i panjohur → lista DG + fjalëkyçe.
     """
     if product_name is None or (isinstance(product_name, float) and pd.isna(product_name)):
         return ""
@@ -406,7 +549,7 @@ def resolve_product_category(
         return ""
 
     if not business_cats_list:
-        return original
+        return resolve_product_global(original, product_keywords)
 
     normalized = strip_product_noise(original)
     compact = normalized.replace(" ", "")
@@ -439,7 +582,10 @@ def get_product_by_business(
         business_cats_list = lookup.get(normalize_business_name(str(business_name)))
 
     if not business_cats_list:
-        return original
+        trained = match_training_category(original)
+        if trained:
+            return trained
+        return resolve_product_global(original, product_keywords)
 
     result = resolve_product_category(
         product_name,
@@ -634,6 +780,48 @@ def _shitesi_column_has_data(df: pd.DataFrame, mapping: dict) -> bool:
     return False
 
 
+def transform_reference_training_excel(filepath: str, settings: dict) -> tuple:
+    """
+  Excel referencë DG (emërtim → kategori): importon trajnimin dhe mapo kolonën e majtë.
+    """
+    df = pd.read_excel(filepath, header=None, engine="openpyxl")
+    if df.empty:
+        raise ValueError("Excel-i është bosh.")
+
+    if not is_reference_training_excel(df):
+        raise ValueError("Skedari nuk është format referencë DG (2 kolona emërtim/kategori).")
+
+    row_count, pair_count = import_training_from_excel(filepath)
+    product_keywords = settings.get("product_keywords", {})
+    business_categories = settings.get("business_categories", {})
+
+    src_col, tgt_col = _detect_reference_columns(df)
+    df = df.copy()
+    matched = 0
+    processed = 0
+
+    for row_idx in range(len(df)):
+        src = _cell_text(df.iat[row_idx, src_col])
+        if not src:
+            continue
+        processed += 1
+        mapped = map_product_cell("", src, business_categories, product_keywords)
+        df.iat[row_idx, src_col] = mapped
+        expected = _cell_text(df.iat[row_idx, tgt_col])
+        if expected and _norm_category(mapped) == _norm_category(expected):
+            matched += 1
+
+    df_export = _prepare_df_for_export(df)
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    out_name = f"dg_mapped_{timestamp}.xlsx"
+    out_path = DOWNLOAD_FOLDER / out_name
+    df_export.to_excel(out_path, index=False, header=False, engine="openpyxl", na_rep="")
+
+    pct = round(100 * matched / processed, 1) if processed else 0
+    meta_note = [f"DG referencë: {pair_count} çifte, përputhje {matched}/{processed} ({pct}%)"]
+    return df, meta_note, out_name, processed
+
+
 def transform_excel(filepath: str, settings: dict) -> tuple:
     """
     Lexon Excel-in të plotë, ndryshon vetëm qelizat në kolonat Pranuesi / Produkti / SHITESI,
@@ -642,6 +830,9 @@ def transform_excel(filepath: str, settings: dict) -> tuple:
     df = pd.read_excel(filepath, header=None, engine="openpyxl")
     if df.empty:
         raise ValueError("Excel-i është bosh.")
+
+    if is_reference_training_excel(df):
+        return transform_reference_training_excel(filepath, settings)
 
     mapping = find_excel_column_mapping(df)
     if mapping["shitesi_col"] is None:
@@ -672,12 +863,10 @@ def transform_excel(filepath: str, settings: dict) -> tuple:
         shitesi_val = _shitesi_for_row(df, row_idx, sh_col, data_start) if sh_col is not None else ""
 
         for prod_col in produkti_cols:
-            if not _cell_text(shitesi_val):
-                continue
             if _is_blank_cell(df.iat[row_idx, prod_col]):
                 continue
             orig_product = df.iat[row_idx, prod_col]
-            df.iat[row_idx, prod_col] = get_product_by_business(
+            df.iat[row_idx, prod_col] = map_product_cell(
                 shitesi_val,
                 orig_product,
                 business_categories,
@@ -836,15 +1025,23 @@ def upload():
         username = current_user.id if current_user.is_authenticated else "admin"
         log_job(original_name, out_name, row_count, username)
 
+        dg_msg = None
+        if unknown and len(unknown) == 1 and str(unknown[0]).startswith("DG referencë"):
+            dg_msg = str(unknown[0])
+            unknown = []
+
         flash(
             f"Excel u transformua me sukses. {row_count} rreshta të dhënash u përpunuan "
             f"(të gjitha kolonat u ruajtën).",
             "success",
         )
+        if dg_msg:
+            flash(dg_msg, "info")
         if unknown:
             flash(
                 f"Biznese të panjohura ({len(unknown)}): {', '.join(unknown[:5])}"
-                + ("..." if len(unknown) > 5 else ""),
+                + ("..." if len(unknown) > 5 else "")
+                + " — produktet mapohen nga lista DG / fjalëkyçe.",
                 "warning",
             )
     except Exception as exc:

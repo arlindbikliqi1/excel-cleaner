@@ -97,6 +97,118 @@ def reload_training_cache() -> None:
     _CACHE = None
 
 
+def import_training_from_excel(path: Path | str) -> tuple[int, int]:
+    """Lexon Excel referencë (emërtim → kategori) dhe përditëson product_training.json."""
+    import pandas as pd
+    from collections import Counter, defaultdict
+
+    path = Path(path)
+    df = pd.read_excel(path, header=None, engine="openpyxl")
+
+    src_col, tgt_col = _detect_reference_columns(df)
+    if src_col is None:
+        raise ValueError("Nuk u gjet formati referencë (2 kolona: emërtim + kategori).")
+
+    rows: list[tuple[str, str]] = []
+    for _, row in df.iterrows():
+        src = row.iloc[src_col] if src_col < len(row) else None
+        tgt = row.iloc[tgt_col] if tgt_col < len(row) else None
+        if src is None or tgt is None:
+            continue
+        src_s = str(src).strip()
+        tgt_s = str(tgt).strip()
+        if not src_s or src_s.lower() in ("nan", "none"):
+            continue
+        if not tgt_s or tgt_s.lower() in ("nan", "none"):
+            continue
+        rows.append((src_s, norm_category(tgt_s)))
+
+    if not rows:
+        raise ValueError("Excel referencë nuk ka rreshta të vlefshëm.")
+
+    votes: dict[str, Counter] = defaultdict(Counter)
+    for src, cat in rows:
+        key = strip_product_noise(src)
+        if key:
+            votes[key][cat] += 1
+
+    exact = {k: c.most_common(1)[0][0] for k, c in votes.items()}
+    phrases = dict(exact)
+    for src, cat in rows:
+        clean = strip_product_noise(src)
+        if len(clean) >= 5:
+            phrases[clean] = exact.get(clean, cat)
+
+    existing = load_training_data()
+    old_pairs = {(strip_product_noise(p["source"]), norm_category(p["category"])) for p in existing.get("pairs", [])}
+    seen: set[str] = set()
+    pairs = []
+    for src, cat in rows:
+        key = strip_product_noise(src)
+        if key in seen:
+            continue
+        seen.add(key)
+        pairs.append({"source": src, "category": exact[key]})
+
+    for p in existing.get("pairs", []):
+        key = strip_product_noise(p.get("source", ""))
+        if key and key not in seen:
+            seen.add(key)
+            pairs.append(p)
+
+    old_phrases = existing.get("phrases", {})
+    merged_phrases = dict(old_phrases)
+    merged_phrases.update(phrases)
+
+    TRAINING_PATH.parent.mkdir(exist_ok=True)
+    with open(TRAINING_PATH, "w", encoding="utf-8") as f:
+        json.dump({"pairs": pairs, "phrases": merged_phrases}, f, ensure_ascii=False, indent=2)
+
+    reload_training_cache()
+    return len(rows), len(pairs)
+
+
+def _detect_reference_columns(df) -> tuple[int | None, int | None]:
+    """Gjen 2 kolonat: majtas emërtim i gjatë, djathtas kategori e shkurtër."""
+    best_count = 0
+    best_src, best_tgt = None, None
+    cols = df.shape[1]
+    for src_col in range(cols):
+        for tgt_col in range(cols):
+            if src_col == tgt_col:
+                continue
+            count = 0
+            for row_idx in range(len(df)):
+                try:
+                    s = str(df.iat[row_idx, src_col]).strip()
+                    t = str(df.iat[row_idx, tgt_col]).strip()
+                except Exception:
+                    continue
+                if s.lower() in ("nan", "none", "") or t.lower() in ("nan", "none", ""):
+                    continue
+                if len(s) >= 2 and len(t) >= 2 and len(s) >= len(t):
+                    count += 1
+            if count > best_count:
+                best_count = count
+                best_src, best_tgt = src_col, tgt_col
+    if best_count < 8:
+        return None, None
+    return best_src, best_tgt
+
+
+def is_reference_training_excel(df) -> bool:
+    src, tgt = _detect_reference_columns(df)
+    if src is None:
+        return False
+    scan = min(15, len(df))
+    for row_idx in range(scan):
+        for col_idx in range(df.shape[1]):
+            val = str(df.iat[row_idx, col_idx]).strip().lower().replace("ë", "e")
+            if val in ("shitesi", "shites", "seller", "dyqan") or val.startswith("shites"):
+                return False
+    return True
+
+
 def match_training_category(product_name: str) -> str | None:
     """Kthen kategorinë nga lista DG (para mapimit te biznesi)."""
     cat, _ = match_training_category_with_mode(product_name)

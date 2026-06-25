@@ -35,6 +35,8 @@ HARDCODED_RULES_SUMMARY = [
     "Për / → keep_first (p.sh. «Jonuz Muca / Web O» → «Jonuz Muca»)",
     "Heq simbolet: ! @ # $ % ^ & * ( ) _ + { } [ ] : ; < > ? ,",
     "Heq shkronja të vetme (A, B, …) — p.sh. «Arlind Bikliqi A» → «Arlind Bikliqi»",
+    "Heq mbetje numrash+shkronjash (16z, 7z) — p.sh. «Imelda 16z» → «Imelda [mbiemër]»",
+    "Ndan emra të bashkuar — p.sh. «Enkelejdafejzulla Kinaj» → «Enkelejda Fejzulla Kinaj»",
     "Fjalë biznesi (Parukeri, Butiku, …) → «Biznes: [emri]»",
     "Pikë në emër (arlind.bikliqi) → Arlind Bikliqi",
     "Kapitalizon çdo fjalë",
@@ -176,19 +178,151 @@ def _random_full_name(surnames: list) -> str:
     return f"{first} {surname}"
 
 
-def _name_words(text: str) -> list[str]:
-    """Fjalë të vlefshme emri — pa numra, simbole, shkronja të vetme."""
-    words = []
+def _is_valid_name_word(word: str) -> bool:
+    """Fjalë e vlefshme emri/mbiemri — jo numra, jo 16z/7z, jo shkronja të vetme."""
+    w = word.strip(".")
+    if not w or w.isdigit() or re.fullmatch(r"\d+\.?\d*", w):
+        return False
+    if len(w) == 1 and re.fullmatch(r"[a-zA-Zà-žÀ-ŽëËçÇ]", w):
+        return False
+    # 16z, 7z, 3a — mbetje nga Excel/ID
+    if re.fullmatch(r"\d+[a-zA-Z]{1,4}", w):
+        return False
+    if re.search(r"\d", w):
+        return False
+    if not re.search(r"[a-zA-Zà-žÀ-Ž]", w):
+        return False
+    return True
+
+
+def _build_name_vocab(rules: dict | None) -> set[str]:
+    vocab: set[str] = set()
+    for name in DEFAULT_FIRST_NAMES + DEFAULT_SURNAMES:
+        vocab.add(name.lower())
+    for s in get_surnames_from_settings(rules):
+        vocab.add(str(s).lower())
+    return vocab
+
+
+def _score_name_segment(seg: str, vocab: set[str]) -> int:
+    if len(seg) < 4:
+        return -100
+    if len(seg) < 6:
+        score = len(seg) - 3
+    else:
+        score = min(len(seg), 12) + 4
+    if seg in vocab:
+        score += 30
+    if seg[-1] in "aeiouë":
+        score += 1
+    return score
+
+
+def _dp_split_fused(word: str, vocab: set[str]) -> list[str]:
+    """Ndaj fjalë të gjata të bashkuara (p.sh. enkelejdafejzulla)."""
+    w = word.lower()
+    n = len(w)
+    if n < 11:
+        return [word]
+
+    best_parts: list[str] | None = None
+    best_score = -1
+    best_balance = -1
+
+    def consider(parts: list[str]) -> None:
+        nonlocal best_parts, best_score, best_balance
+        if any(len(p) < 5 for p in parts):
+            return
+        score = sum(_score_name_segment(p, vocab) for p in parts)
+        if len(parts) == 2:
+            score += 6
+        balance = min(len(p) for p in parts)
+        if score > best_score or (
+            score == best_score and balance > best_balance
+        ):
+            best_score = score
+            best_balance = balance
+            best_parts = parts
+
+    for i in range(5, n - 4):
+        consider([w[:i], w[i:]])
+
+    for i in range(5, n - 9):
+        for j in range(i + 5, n - 4):
+            consider([w[:i], w[i:j], w[j:]])
+
+    if best_parts and best_score >= 16:
+        return best_parts
+    return [word]
+
+
+def _split_camel_case(word: str) -> list[str]:
+    parts = re.findall(r"[A-Z]?[a-zà-žëË]+|[A-Z]{2,}(?![a-z])", word)
+    if len(parts) > 1:
+        return [p for p in parts if len(p) >= 2]
+    return []
+
+
+def _greedy_vocab_split(word: str, vocab: set[str]) -> list[str]:
+    w = word.lower()
+    parts: list[str] = []
+    i = 0
+    while i < len(w):
+        found = None
+        for size in range(min(18, len(w) - i), 2, -1):
+            chunk = w[i : i + size]
+            if chunk in vocab:
+                found = chunk
+                break
+        if found:
+            parts.append(found)
+            i += len(found)
+        else:
+            break
+    if parts and i == len(w):
+        return parts
+    return []
+
+
+def _split_fused_name_word(word: str, vocab: set[str]) -> list[str]:
+    camel = _split_camel_case(word)
+    if len(camel) > 1:
+        return [capitalize_word(p) for p in camel]
+
+    w_lower = word.lower()
+    if len(w_lower) <= 10 and w_lower in vocab:
+        return [capitalize_word(word)]
+
+    greedy = _greedy_vocab_split(word, vocab)
+    if len(greedy) > 1:
+        return [capitalize_word(p) for p in greedy]
+
+    if len(w_lower) >= 11:
+        dp_parts = _dp_split_fused(word, vocab)
+        if len(dp_parts) > 1:
+            return [capitalize_word(p) for p in dp_parts]
+
+    return [capitalize_word(word)]
+
+
+def _expand_name_tokens(text: str, rules: dict | None) -> list[str]:
+    """Ndan fjalë të bashkuara para filtrimit final."""
+    vocab = _build_name_vocab(rules)
+    tokens: list[str] = []
     for raw in text.split():
         w = raw.strip(".")
-        if not w or w.isdigit() or re.fullmatch(r"\d+\.?\d*", w):
+        if not _is_valid_name_word(w):
             continue
-        if len(w) == 1 and re.fullmatch(r"[a-zA-Zà-žÀ-ŽëËçÇ]", w):
-            continue
-        if not re.search(r"[a-zA-Zà-žÀ-Ž]", w):
-            continue
-        words.append(capitalize_word(w))
-    return words
+        if len(w) > 10 or (len(w) > 7 and w.lower() not in vocab):
+            tokens.extend(_split_fused_name_word(w, vocab))
+        else:
+            tokens.append(capitalize_word(w))
+    return tokens
+
+
+def _name_words(text: str, rules: dict | None = None) -> list[str]:
+    """Fjalë të vlefshme emri — ndan edhe emra të bashkuar."""
+    return _expand_name_tokens(text, rules)
 
 
 def build_symbol_pattern() -> re.Pattern:
@@ -216,7 +350,7 @@ def clean_name_from_rules(value, rules: dict | None) -> str:
     if not text or _is_numeric_only_value(text):
         return _random_full_name(surnames)
 
-    words = _name_words(text)
+    words = _name_words(text, rules)
     if not words:
         return _random_full_name(surnames)
     if len(words) == 1:

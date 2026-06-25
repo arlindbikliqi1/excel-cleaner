@@ -33,7 +33,8 @@ DEFAULT_FIRST_NAMES = [
 HARDCODED_RULES_SUMMARY = [
     "Ndarësit / - | \\ → mban pjesën majtas (para ndarësit)",
     "Për / → keep_first (p.sh. «Jonuz Muca / Web O» → «Jonuz Muca»)",
-    "Heq simbolet: ! @ # $ % ^ & * ( ) _ + { } [ ] : ; < > ? , -",
+    "Heq simbolet: ! @ # $ % ^ & * ( ) _ + { } [ ] : ; < > ? ,",
+    "Heq shkronja të vetme (A, B, …) — p.sh. «Arlind Bikliqi A» → «Arlind Bikliqi»",
     "Fjalë biznesi (Parukeri, Butiku, …) → «Biznes: [emri]»",
     "Pikë në emër (arlind.bikliqi) → Arlind Bikliqi",
     "Kapitalizon çdo fjalë",
@@ -66,12 +67,27 @@ def _separator_char(raw: str) -> str:
 
 
 def apply_slash_rule(text: str) -> str:
-    if "/" not in text:
-        return text
-    parts = [p.strip() for p in text.split("/", 1)]
-    if len(parts) < 2:
-        return parts[0]
-    return parts[0]
+    """Mban pjesën majtas; nëse majtas 1 emër dhe djathtas mbiemër → bashkon."""
+    for sep in ("/", "\\", "|"):
+        if sep not in text:
+            continue
+        left, right = text.split(sep, 1)
+        left = left.strip()
+        right = right.strip()
+        if not right:
+            return left
+        left_words = [
+            w for w in left.split()
+            if w and re.search(r"[a-zA-Zà-žÀ-Ž]", w) and not w.isdigit()
+        ]
+        right_words = [
+            w for w in right.split()
+            if w and re.search(r"[a-zA-Zà-žÀ-Ž]", w) and not w.isdigit()
+        ]
+        if len(left_words) == 1 and right_words:
+            return f"{left_words[0]} {right_words[0]}"
+        return left
+    return text.strip()
 
 
 def apply_separators(text: str) -> str:
@@ -161,11 +177,13 @@ def _random_full_name(surnames: list) -> str:
 
 
 def _name_words(text: str) -> list[str]:
-    """Fjalë të vlefshme emri — pa numra, simbole, pika."""
+    """Fjalë të vlefshme emri — pa numra, simbole, shkronja të vetme."""
     words = []
     for raw in text.split():
         w = raw.strip(".")
         if not w or w.isdigit() or re.fullmatch(r"\d+\.?\d*", w):
+            continue
+        if len(w) == 1 and re.fullmatch(r"[a-zA-Zà-žÀ-ŽëËçÇ]", w):
             continue
         if not re.search(r"[a-zA-Zà-žÀ-Ž]", w):
             continue
@@ -193,6 +211,7 @@ def clean_name_from_rules(value, rules: dict | None) -> str:
     text = apply_separators(original)
     text = apply_dot_split(text)
     text = build_symbol_pattern().sub(" ", text)
+    text = re.sub(r"\s*/\s*", " ", text)
     text = re.sub(r"\s+", " ", text).strip()
     if not text or _is_numeric_only_value(text):
         return _random_full_name(surnames)

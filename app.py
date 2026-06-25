@@ -48,6 +48,7 @@ from database import (
     verify_admin,
 )
 from name_cleaning import HARDCODED_RULES_SUMMARY, clean_name_from_rules
+from product_training import match_training_category, match_training_category_with_mode, strip_product_noise
 
 BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR / "data"
@@ -67,6 +68,8 @@ SIZE_TOKENS = frozenset({"xs", "s", "m", "l", "xl", "xxl", "xxxl", "2xl", "3xl",
 SHORT_KEYWORD_MAX_LEN = 3
 MIN_CATEGORY_MATCH_SCORE = 55
 MIN_CONFIDENT_MATCH_SCORE = 110
+MIN_TRAINING_MATCH_SCORE = 520
+MIN_SHORT_KEYWORD_SCORE = 280
 MIN_PREFIX_TOKEN_LEN = 4
 MIN_STRONG_PREFIX_LEN = 5
 MIN_PREFIX_CATEGORY_LEN = 5
@@ -310,6 +313,23 @@ def _keyword_to_business_category(
     return None
 
 
+def _map_training_to_business(
+    product_name: str, business_cats_list: list
+) -> tuple[str | None, str]:
+    """Lista DG → kategori e biznesit."""
+    trained, mode = match_training_category_with_mode(product_name)
+    if not trained:
+        return None, ""
+    direct = _business_category_for_norm(business_cats_list, _norm_category(trained))
+    if direct:
+        return direct, mode
+    for cat in business_cats_list:
+        if _norm_category(cat) == _norm_category(trained):
+            return cat, mode
+    form = _business_form_for_token(trained, business_cats_list)
+    return form, mode if form else ""
+
+
 def _resolve_business_category(
     normalized: str,
     compact: str,
@@ -317,6 +337,7 @@ def _resolve_business_category(
     meaningful: list,
     business_cats_list: list,
     product_keywords: dict,
+    original: str = "",
 ) -> str:
     """Përputh kategori të biznesit; pa përputhje të besueshme → random."""
     if len(business_cats_list) == 1:
@@ -324,6 +345,14 @@ def _resolve_business_category(
 
     scores: dict[str, int] = {}
     cat_by_norm = {_norm_category(cat): cat for cat in business_cats_list}
+
+    # 1) Lista DG — përputhje e saktë kthehet menjëherë
+    trained_form, train_mode = _map_training_to_business(original or normalized, business_cats_list)
+    if trained_form and train_mode == "exact":
+        return trained_form
+    if trained_form:
+        norm = _norm_category(trained_form)
+        scores[norm] = max(scores.get(norm, 0), MIN_TRAINING_MATCH_SCORE + len(norm))
 
     for cat in business_cats_list:
         norm = _norm_category(cat)
@@ -347,6 +376,8 @@ def _resolve_business_category(
             continue
         norm = _norm_category(business_form)
         kw_score = 300 + len(normalize_product_text(keyword))
+        if len(normalize_product_text(keyword)) <= SHORT_KEYWORD_MAX_LEN:
+            kw_score = MIN_SHORT_KEYWORD_SCORE + len(keyword)
         scores[norm] = max(scores.get(norm, 0), kw_score)
 
     if not scores or max(scores.values()) < MIN_CONFIDENT_MATCH_SCORE:
@@ -377,13 +408,13 @@ def resolve_product_category(
     if not business_cats_list:
         return original
 
-    normalized = normalize_product_text(original)
+    normalized = strip_product_noise(original)
     compact = normalized.replace(" ", "")
     tokens = _product_tokens(normalized)
     meaningful = _meaningful_tokens(tokens)
 
     return _resolve_business_category(
-        normalized, compact, tokens, meaningful, business_cats_list, product_keywords
+        normalized, compact, tokens, meaningful, business_cats_list, product_keywords, original
     )
 
 

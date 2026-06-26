@@ -600,6 +600,47 @@ def _norm_header_cell(val) -> str:
     return str(val).strip().lower().replace("ë", "e")
 
 
+# Kolona që nuk duhen kurrë mapuar si produkt (kodi, pako, telefon, etj.)
+_PROTECTED_COLUMN_HEADERS = frozenset({
+    "kodi", "kod", "code", "pako", "pesha", "pesha/kg", "cmimi", "origjina",
+    "origin", "qyteti", "city", "opsionale", "telefon", "tel", "phone",
+    "pranuesi", "pranues", "shitesi", "shites", "seller", "dyqan", "shop",
+})
+
+
+def _header_label(df: pd.DataFrame, header_row: int | None, col_idx: int) -> str:
+    if header_row is None or col_idx >= df.shape[1]:
+        return ""
+    return _norm_header_cell(df.iat[header_row, col_idx])
+
+
+def _is_protected_column(df: pd.DataFrame, mapping: dict, col_idx: int) -> bool:
+    """Kolona që nuk duhet prekur nga mapimi i produktit."""
+    label = _header_label(df, mapping.get("header_row"), col_idx)
+    if not label:
+        return False
+    if label in _PROTECTED_COLUMN_HEADERS:
+        return True
+    return any(
+        tag in label
+        for tag in ("kodi", "pako", "pesha", "cmim", "origjin", "qytet", "opsion", "telefon")
+    )
+
+
+def _looks_like_kodi_column(df: pd.DataFrame, col_idx: int, data_start: int) -> bool:
+    """Kolona me kode artikujsh (00056-004607) — jo përshkrim produkti."""
+    code_like = 0
+    total = 0
+    for row_idx in range(data_start, min(data_start + 60, len(df))):
+        text = _cell_text(df.iat[row_idx, col_idx])
+        if not text:
+            continue
+        total += 1
+        if re.match(r"^[\dA-Za-z\-]+$", text) and "-" in text and len(text) >= 8:
+            code_like += 1
+    return total >= 5 and code_like / total >= 0.5
+
+
 def _classify_header_cell(val) -> str | None:
     """Kthen 'pranuesi', 'produkti', 'shitesi' ose None."""
     v = _norm_header_cell(val)
@@ -609,6 +650,8 @@ def _classify_header_cell(val) -> str | None:
         return "shitesi"
     if v in ("pranuesi", "pranues", "pranuesin") or "pranues" in v:
         return "pranuesi"
+    if "pershkrim" in v or v in ("description", "desc"):
+        return "produkti"
     if (
         v in ("produkti", "produktet", "produkt")
         or "produkt" in v
@@ -699,6 +742,10 @@ def _infer_produkti_column(df: pd.DataFrame, mapping: dict) -> int | None:
     for col_idx in range(df.shape[1]):
         if col_idx in skip:
             continue
+        if _is_protected_column(df, mapping, col_idx):
+            continue
+        if _looks_like_kodi_column(df, col_idx, data_start):
+            continue
         score = 0
         for row_idx in range(data_start, min(data_start + 200, len(df))):
             text = _cell_text(df.iat[row_idx, col_idx])
@@ -711,20 +758,34 @@ def _infer_produkti_column(df: pd.DataFrame, mapping: dict) -> int | None:
 
 
 def _produkti_columns(df: pd.DataFrame, mapping: dict) -> list[int]:
-    """Të gjitha kolonat e produktit/kategorisë që duhen zëvendësuar."""
+    """Vetëm kolona Pershkrimi/Produkti — jo Kodi apo kolona të tjera."""
     cols: set[int] = set()
     header_row = mapping["header_row"]
     if header_row is not None:
         for col_idx in range(df.shape[1]):
             if _classify_header_cell(df.iat[header_row, col_idx]) == "produkti":
-                cols.add(col_idx)
-    if mapping["produkti_col"] is not None:
+                if not _is_protected_column(df, mapping, col_idx):
+                    cols.add(col_idx)
+    if mapping["produkti_col"] is not None and not _is_protected_column(
+        df, mapping, mapping["produkti_col"]
+    ):
         cols.add(mapping["produkti_col"])
     if not cols:
         inferred = _infer_produkti_column(df, mapping)
         if inferred is not None:
             cols.add(inferred)
     return sorted(cols)
+
+
+def _canonical_business_name(name: str, business_categories: dict) -> str:
+    """Emër i njohur nga settings — ruaj shkrimin zyrtar."""
+    if not name:
+        return name
+    target = normalize_business_name(name)
+    for key in business_categories:
+        if normalize_business_name(key) == target:
+            return key
+    return str(name).strip()
 
 
 def _cell_text(val) -> str:
@@ -736,6 +797,49 @@ def _cell_text(val) -> str:
 
 def _is_blank_cell(val) -> bool:
     return _cell_text(val) == ""
+
+
+def _is_order_data_row(
+    df: pd.DataFrame,
+    row_idx: int,
+    mapping: dict,
+    produkti_cols: list[int] | None = None,
+) -> bool:
+    """Rresht i vlefshëm porosie — jo rresht bosh (edhe pas forward-fill të SHITESI)."""
+    if row_idx < mapping["data_start"]:
+        return False
+    if produkti_cols is None:
+        produkti_cols = _produkti_columns(df, mapping)
+    pr_col = mapping.get("pranuesi_col")
+
+    for col_idx in produkti_cols:
+        if _cell_text(df.iat[row_idx, col_idx]):
+            return True
+    if pr_col is not None and _cell_text(df.iat[row_idx, pr_col]):
+        return True
+    kodi = _cell_text(df.iat[row_idx, 0])
+    if kodi and kodi.lower() not in ("kodi", "code") and (len(kodi) > 4 or "-" in kodi):
+        return True
+    return False
+
+
+def _count_order_data_rows(df: pd.DataFrame, mapping: dict) -> int:
+    produkti_cols = _produkti_columns(df, mapping)
+    return sum(
+        1
+        for row_idx in range(mapping["data_start"], len(df))
+        if _is_order_data_row(df, row_idx, mapping, produkti_cols)
+    )
+
+
+def _trim_to_order_rows(df: pd.DataFrame, mapping: dict) -> pd.DataFrame:
+    """Heq rreshtat bosh — Excel shpesh lexon 1000+ rreshta të zbrazëta."""
+    produkti_cols = _produkti_columns(df, mapping)
+    keep = list(range(0, mapping["data_start"]))
+    for row_idx in range(mapping["data_start"], len(df)):
+        if _is_order_data_row(df, row_idx, mapping, produkti_cols):
+            keep.append(row_idx)
+    return df.iloc[keep].copy().reset_index(drop=True)
 
 
 def _prepare_df_for_export(df: pd.DataFrame) -> pd.DataFrame:
@@ -860,7 +964,15 @@ def transform_excel(filepath: str, settings: dict) -> tuple:
     produkti_cols = _produkti_columns(df, mapping)
 
     for row_idx in range(data_start, len(df)):
+        if not _is_order_data_row(df, row_idx, mapping, produkti_cols):
+            continue
         shitesi_val = _shitesi_for_row(df, row_idx, sh_col, data_start) if sh_col is not None else ""
+
+        if sh_col is not None and not _is_blank_cell(df.iat[row_idx, sh_col]):
+            df.iat[row_idx, sh_col] = _canonical_business_name(
+                df.iat[row_idx, sh_col], business_categories
+            )
+            shitesi_val = _cell_text(df.iat[row_idx, sh_col])
 
         for prod_col in produkti_cols:
             if _is_blank_cell(df.iat[row_idx, prod_col]):
@@ -878,6 +990,9 @@ def transform_excel(filepath: str, settings: dict) -> tuple:
                 df.iat[row_idx, pr_col], name_rules
             )
 
+    data_row_count = _count_order_data_rows(df, mapping)
+    df = _trim_to_order_rows(df, mapping)
+
     df_export = _prepare_df_for_export(df)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     out_name = f"cleaned_{timestamp}.xlsx"
@@ -886,7 +1001,6 @@ def transform_excel(filepath: str, settings: dict) -> tuple:
         out_path, index=False, header=False, engine="openpyxl", na_rep=""
     )
 
-    data_row_count = max(0, len(df) - data_start)
     return df, unknown_businesses, out_name, data_row_count
 
 
@@ -913,7 +1027,7 @@ def save_dashboard_preview(
     """Preview në disk — session cookie nuk mbajnë tabela të mëdha (>4KB)."""
     preview_df = _prepare_df_for_export(df)
     html = preview_df.to_html(
-        classes="table table-striped table-bordered table-sm mb-0",
+        classes="table table-sm preview-table mb-0",
         index=False,
         header=False,
         na_rep="",

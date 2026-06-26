@@ -1,80 +1,85 @@
 {% extends "base.html" %}
-{% block title %}Dashboard - Excel Cleaner{% endblock %}
-
-{% block extra_css %}
-<style>
-  .upload-zone {
-    border: 2px dashed #cbd5e1;
-    border-radius: 12px;
-    padding: 2rem 1.5rem;
-    text-align: center;
-    background: #f8fafc;
-    transition: border-color 0.2s, background 0.2s;
-  }
-  .upload-zone:hover { border-color: #3b82f6; background: #eff6ff; }
-  .upload-zone input[type=file] { max-width: 100%; margin: 0 auto; }
-  .stat-card {
-    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-    color: #fff;
-    border-radius: var(--card-radius);
-    padding: 1.25rem;
-    height: 100%;
-  }
-  .stat-card.secondary {
-    background: linear-gradient(135deg, #64748b 0%, #475569 100%);
-  }
-</style>
-{% endblock %}
+{% block title %}Gjenerimi - Excel Cleaner{% endblock %}
 
 {% block content %}
 <div class="page-header">
-  <h1><i class="fas fa-home text-primary me-2"></i>Dashboard</h1>
-  <p class="subtitle">Ngarko Excel-in, transformo dhe shkarko skedarin e pastruar</p>
+  <h1>Gjenerimi i listës</h1>
+  <p class="subtitle">Ngarko Excel-in, pastro automatikisht Pershkrimin, Pranuesin dhe Shitësin — kolonat e tjera mbeten të paprekura.</p>
 </div>
 
-<div class="row g-4 mb-4">
-  <div class="col-lg-7">
-    <div class="card-app h-100">
-      <div class="card-header"><i class="fas fa-upload me-1"></i> Ngarko Excel</div>
-      <div class="card-body">
-        <div class="upload-zone mb-3">
-          <i class="fas fa-file-excel fa-2x text-success mb-2"></i>
-          <p class="small text-muted mb-3">
-            Sistemi kërkon kolonat <strong>Pranuesi</strong>, <strong>Produkti</strong>,
-            <strong>SHITESI</strong> dhe ndryshon vetëm ato — të gjitha kolonat e tjera dhe
-            radhitja e rreshtave mbeten si në Excel-in origjinal.
-          </p>
-          <form method="post" action="{{ url_for('upload') }}" enctype="multipart/form-data">
-            <input type="file" class="form-control mb-3" name="file" accept=".xlsx,.xls" required>
-            <button type="submit" class="btn btn-success btn-lg w-100">
-              <i class="fas fa-magic me-1"></i> Ngarko dhe Transformo
-            </button>
-          </form>
+<div class="steps-row">
+  <div class="step-chip">
+    <span class="num">1</span>
+    <span>Ngarko skedarin .xlsx</span>
+  </div>
+  <div class="step-chip">
+    <span class="num">2</span>
+    <span>Pastro &amp; mapo të dhënat</span>
+  </div>
+  <div class="step-chip">
+    <span class="num">3</span>
+    <span>Shkarko listën e gatshme</span>
+  </div>
+</div>
+
+<div class="upload-hero">
+  <div class="card-app mb-0">
+    <div class="card-header">
+      <span><i class="fas fa-cloud-arrow-up me-2 text-primary"></i>Ngarko Excel</span>
+    </div>
+    <div class="card-body">
+      <form method="post" action="{{ url_for('upload') }}" enctype="multipart/form-data" id="uploadForm">
+        <div class="dropzone" id="dropzone" role="button" tabindex="0" aria-label="Zgjidh ose lësho skedarin Excel">
+          <div class="dropzone-icon"><i class="fas fa-file-excel"></i></div>
+          <h3>Tërhiq &amp; lësho skedarin këtu</h3>
+          <p>ose kliko për të zgjedhur nga kompjuteri — pranohen .xlsx dhe .xls</p>
+          <div class="file-name d-none mb-3">
+            <i class="fas fa-check-circle"></i>
+            <span id="selectedFileName"></span>
+          </div>
+          <input type="file" name="file" id="excelFile" accept=".xlsx,.xls" required>
+          <button type="submit" class="btn btn-success btn-lg px-4">
+            <i class="fas fa-wand-magic-sparkles me-2"></i>Pastro listën
+          </button>
+        </div>
+      </form>
+      <div class="mt-3 p-3 rounded-3 bg-light border border-light">
+        <div class="small text-muted">
+          <strong class="text-dark">Kolonat që ndryshohen:</strong>
+          <span class="badge bg-white text-dark border ms-1">Pershkrimi</span>
+          <span class="badge bg-white text-dark border">Pranuesi</span>
+          <span class="badge bg-white text-dark border">Shitesi</span>
+          <br class="d-sm-none">
+          <span class="d-inline-block mt-1">Kodi, Pako, Pesha, Çmimi, Telefoni etj. — <em>mbeten si janë</em>.</span>
         </div>
       </div>
     </div>
   </div>
-  <div class="col-lg-5">
-    <div class="stat-card mb-3 {% if not last_download %}secondary{% endif %}">
-      <div class="small opacity-75 mb-1">Eksporti i fundit</div>
+
+  <div class="stat-grid">
+    <div class="stat-card {% if last_download %}primary{% else %}muted{% endif %}">
+      <i class="fas fa-file-export icon-bg"></i>
+      <div class="label">Eksporti i fundit</div>
       {% if last_download %}
-      <div class="fw-bold text-break mb-3">{{ last_download }}</div>
+      <div class="value mb-3">{{ last_download }}</div>
       <a href="{{ url_for('download', filename=last_download) }}" class="btn btn-light btn-sm">
-        <i class="fas fa-download me-1"></i> Shkarko Excel
+        <i class="fas fa-download me-1"></i>Shkarko
       </a>
       {% else %}
-      <p class="mb-0 small">Ngarko një skedar për të filluar</p>
+      <div class="value">Asnjë skedar ende</div>
+      <p class="small mb-0 mt-2 opacity-75">Ngarko listën për të filluar</p>
       {% endif %}
     </div>
+
     {% if row_count %}
-    <div class="card-app">
-      <div class="card-body py-3 d-flex align-items-center gap-3">
-        <div class="rounded-circle bg-success bg-opacity-10 p-3">
-          <i class="fas fa-check text-success fa-lg"></i>
+    <div class="card-app mb-0">
+      <div class="card-body d-flex align-items-center gap-3 py-4">
+        <div class="rounded-3 p-3" style="background:#ecfdf5;color:#059669">
+          <i class="fas fa-circle-check fa-lg"></i>
         </div>
         <div>
-          <div class="fw-bold">{{ row_count }} rreshta</div>
-          <div class="small text-muted">u përpunuan me sukses</div>
+          <div class="fs-4 fw-bold text-dark">{{ row_count }}</div>
+          <div class="small text-muted">rreshta u përpunuan</div>
         </div>
       </div>
     </div>
@@ -83,32 +88,35 @@
 </div>
 
 {% if unknown_businesses %}
-<div class="alert alert-warning border-0 shadow-sm d-flex flex-wrap align-items-center gap-2">
+<div class="alert alert-warning border-0 shadow-sm d-flex flex-wrap align-items-center gap-3 mb-4">
   <div class="flex-grow-1">
-    <strong><i class="fas fa-exclamation-triangle me-1"></i> {{ unknown_businesses|length }} shitës të panjohur</strong>
-    <div class="small mt-1">{{ unknown_businesses[:8]|join(', ') }}{% if unknown_businesses|length > 8 %}...{% endif %}</div>
+    <strong><i class="fas fa-triangle-exclamation me-2"></i>{{ unknown_businesses|length }} shitës të panjohur</strong>
+    <div class="small mt-1 text-muted">{{ unknown_businesses[:6]|join(' · ') }}{% if unknown_businesses|length > 6 %} · +{{ unknown_businesses|length - 6 }} të tjerë{% endif %}</div>
   </div>
-  <a href="{{ url_for('businesses') }}" class="btn btn-warning btn-sm">Menaxho shitësit</a>
+  <a href="{{ url_for('businesses') }}" class="btn btn-warning btn-sm text-dark">
+    <i class="fas fa-store me-1"></i>Shto shitësit
+  </a>
 </div>
 {% endif %}
 
 {% if preview_html %}
 <div class="card-app">
-  <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
-    <span><i class="fas fa-table me-1"></i> Preview ({{ row_count }} rreshta)</span>
+  <div class="card-header">
+    <span><i class="fas fa-table me-2 text-primary"></i>Parapamje — {{ row_count }} rreshta</span>
     {% if last_download %}
     <a href="{{ url_for('download', filename=last_download) }}" class="btn btn-sm btn-primary">
-      <i class="fas fa-download me-1"></i> Shkarko
+      <i class="fas fa-download me-1"></i>Shkarko Excel
     </a>
     {% endif %}
   </div>
-  <div class="preview-box">{{ preview_html|safe }}</div>
+  <div class="preview-wrap">{{ preview_html|safe }}</div>
 </div>
 {% else %}
 <div class="card-app">
-  <div class="card-body text-center py-5 text-muted">
-    <i class="fas fa-table fa-3x mb-3 opacity-25"></i>
-    <p class="mb-0">Nuk ka preview. Ngarko një Excel për të parë rezultatin.</p>
+  <div class="card-body empty-state">
+    <i class="fas fa-table"></i>
+    <h3 class="h6 fw-bold text-dark">Nuk ka parapamje</h3>
+    <p class="mb-0 small">Ngarko një skedar Excel për të parë rezultatin këtu para shkarkimit.</p>
   </div>
 </div>
 {% endif %}

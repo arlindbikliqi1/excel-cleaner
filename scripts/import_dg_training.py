@@ -41,6 +41,19 @@ MANUAL_PHRASES = {
     "raft mbi tv": "raft plastike",
     "kreher per mjekerr": "aksesore",
     "mini blinder": "mini blinder",
+    # Test LISTE — emërtime të parregullta → kategori
+    "ansore dantell": "bluze",
+    "bikini": "tuta",
+    "bodysuit": "t-shirt",
+    "boob tape": "t-shirt",
+    "nbb": "t-shirt",
+    "tekstil": "bluze",
+    "depilator": "aksesore depilatore",
+    "mop inoksi": "aksesore",
+    "zorr ujitse": "drite led",
+    "dantell": "mbulese divani",
+    "komplete": "kemishe",
+    "fustan": "fustan",
 }
 
 MANUAL_KEYWORDS = {
@@ -69,19 +82,25 @@ MANUAL_KEYWORDS = {
 def rows_from_excel(path: Path) -> list[tuple[str, str]]:
     import pandas as pd
 
+    from product_training import _detect_reference_columns
+
     df = pd.read_excel(path, header=None, engine="openpyxl")
+    src_col, tgt_col = _detect_reference_columns(df)
+    if src_col is None:
+        raise ValueError(f"Nuk u gjet format referencë në {path}")
+
     rows = []
     for _, row in df.iterrows():
-        if len(row) < 4:
+        if len(row) <= max(src_col, tgt_col):
             continue
-        src, tgt = row.iloc[2], row.iloc[3]
+        src, tgt = row.iloc[src_col], row.iloc[tgt_col]
         if src is None or tgt is None:
             continue
         src_s = str(src).strip()
         tgt_s = str(tgt).strip()
-        if not src_s or src_s.lower() in ("nan", "none"):
+        if not src_s or src_s.lower() in ("nan", "none", "pershkrimi", "kodi"):
             continue
-        if not tgt_s or tgt_s.lower() in ("nan", "none"):
+        if not tgt_s or tgt_s.lower() in ("nan", "none", "pako"):
             continue
         rows.append((src_s, norm_category(tgt_s)))
     return rows
@@ -157,14 +176,32 @@ def main():
         pairs.append({"source": src, "category": exact[key]})
 
     OUT_PATH.parent.mkdir(exist_ok=True)
+    existing_pairs: list[dict] = []
+    existing_phrases: dict[str, str] = {}
+    if OUT_PATH.exists():
+        with open(OUT_PATH, encoding="utf-8") as f:
+            existing = json.load(f)
+        existing_pairs = existing.get("pairs", [])
+        existing_phrases = existing.get("phrases", {})
+
+    merged_seen = {strip_product_noise(p.get("source", "")) for p in pairs}
+    for p in existing_pairs:
+        key = strip_product_noise(p.get("source", ""))
+        if key and key not in merged_seen:
+            merged_seen.add(key)
+            pairs.append(p)
+
+    merged_phrases = dict(existing_phrases)
+    merged_phrases.update(phrases)
+
     with open(OUT_PATH, "w", encoding="utf-8") as f:
-        json.dump({"pairs": pairs, "phrases": phrases}, f, ensure_ascii=False, indent=2)
+        json.dump({"pairs": pairs, "phrases": merged_phrases}, f, ensure_ascii=False, indent=2)
 
     with open(SETTINGS_PATH, encoding="utf-8") as f:
         settings = json.load(f)
 
     merged_kw = dict(settings.get("product_keywords", {}))
-    merged_kw.update(keyword_updates(phrases))
+    merged_kw.update(keyword_updates(merged_phrases))
     settings["product_keywords"] = dict(sorted(merged_kw.items(), key=lambda x: x[0].lower()))
 
     biz = settings.setdefault("business_categories", {})
@@ -184,7 +221,7 @@ def main():
     with open(SETTINGS_PATH, "w", encoding="utf-8") as f:
         json.dump(settings, f, ensure_ascii=False, indent=2)
 
-    print(f"Importuar {len(pairs)} çifte, {len(phrases)} fraza → {OUT_PATH}")
+    print(f"Importuar {len(pairs)} çifte, {len(merged_phrases)} fraza → {OUT_PATH}")
     print(f"Fjalëkyçe në settings: {len(merged_kw)}")
 
 

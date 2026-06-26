@@ -168,8 +168,43 @@ def import_training_from_excel(path: Path | str) -> tuple[int, int]:
     return len(rows), len(pairs)
 
 
+def _detect_test_liste_columns(df) -> tuple[int | None, int | None]:
+    """Test LISTE: Kodi | Pershkrimi | Kategori | Pako — trajnimi është kol. 1 → 2."""
+    if df.shape[1] < 3:
+        return None, None
+
+    header = [str(df.iat[0, c]).strip().lower().replace("ë", "e") for c in range(min(4, df.shape[1]))]
+    if any("pershkrimi" in h for h in header):
+        desc_col = next((i for i, h in enumerate(header) if "pershkrimi" in h), 1)
+        cat_col = desc_col + 1 if desc_col + 1 < df.shape[1] else 2
+        return desc_col, cat_col
+
+    code_rows = 0
+    for row_idx in range(1, min(60, len(df))):
+        c0 = str(df.iat[row_idx, 0]).strip()
+        c1 = str(df.iat[row_idx, 1]).strip()
+        c2 = str(df.iat[row_idx, 2]).strip() if df.shape[1] > 2 else ""
+        if (
+            re.match(r"^[\dA-Za-z\-]+$", c0)
+            and len(c0) >= 6
+            and len(c1) >= 3
+            and len(c2) >= 2
+            and len(c1) > len(c2)
+            and c1.lower() not in ("nan", "none")
+            and c2.lower() not in ("nan", "none")
+        ):
+            code_rows += 1
+    if code_rows >= 10:
+        return 1, 2
+    return None, None
+
+
 def _detect_reference_columns(df) -> tuple[int | None, int | None]:
     """Gjen 2 kolonat: majtas emërtim i gjatë, djathtas kategori e shkurtër."""
+    test_cols = _detect_test_liste_columns(df)
+    if test_cols[0] is not None:
+        return test_cols
+
     best_count = 0
     best_src, best_tgt = None, None
     cols = df.shape[1]
@@ -205,6 +240,8 @@ def is_reference_training_excel(df) -> bool:
         for col_idx in range(df.shape[1]):
             val = str(df.iat[row_idx, col_idx]).strip().lower().replace("ë", "e")
             if val in ("shitesi", "shites", "seller", "dyqan") or val.startswith("shites"):
+                return False
+            if "pranues" in val or "pershkrim" in val or val in ("kodi", "pako"):
                 return False
     return True
 

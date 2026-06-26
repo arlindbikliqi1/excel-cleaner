@@ -3,6 +3,7 @@ from __future__ import annotations
 """Pastrimi i kolonës Pranuesi — rregullat strukturore janë të fiksuara në kod."""
 import random
 import re
+import unicodedata
 
 # --- Rregulla të fiksuara (nuk ndryshohen nga UI) ---
 HARDCODED_SEPARATORS = [
@@ -16,9 +17,34 @@ HARDCODED_SYMBOLS = [
     "!", "@", "#", "$", "%", "^", "&", "*", "(", ")", "_",
     "+", "{", "}", "[", "]", ":", ";", "<", ">", "?", ",", "-", ".",
 ]
-HARDCODED_BUSINESS_KEYWORDS = [
-    "Parukeri", "Butiku", "Sukin", "Farmaci", "Spa", "Qender", "Sallon",
-]
+# Fjalë biznesi — vetëm si fjalë të plota (jo nën-varg, p.sh. «spa» në «spahiu»)
+BUSINESS_TYPE_WORDS = frozenset({
+    "parukeri", "butiku", "sukin", "farmaci", "spa", "qender", "sallon", "salon",
+    "beaty", "beauty", "barber", "shop", "store", "dyqan", "klinike",
+})
+BIZNES_PREFIX_RE = re.compile(r"^(?:biznes\s*:\s*)+", re.IGNORECASE)
+APOSTROPHE_PREFIX_RE = re.compile(
+    r"^mi[\s''`´\u2018\u2019\u201B\u2032]+\s*",
+    re.IGNORECASE,
+)
+PAREN_TAG_RE = re.compile(r"\s*\([A-Za-z]{1,4}\)")
+TRAILING_GARBAGE_RE = re.compile(r"\s+[A-Za-z]{1,2}$")
+# Etiketa kanalesh / mbetje (IG, Fl, FB, …) — jo emra
+GARBAGE_NAME_TOKENS = frozenset({
+    "ig", "fb", "fl", "tt", "yt", "sc", "dm", "nf", "in", "tw", "ok", "id",
+    "xl", "xs", "eu", "uk", "us", "ig", "igj", "web", "www", "com",
+})
+# Etiketa nga formularët / Excel (Emri, Mbiemri, …) — jo pjesë e emrit
+NAME_LABEL_TOKENS = frozenset({
+    "emri", "emer", "emër", "name", "firstname", "first", "emra",
+    "mbiemri", "mbiemer", "mbiemei", "mbiemer", "surname", "lastname", "last",
+    "klienti", "klient", "pranuesi", "pranues", "customer", "client",
+})
+LEADING_NOISE_WORDS = frozenset({"la", "ti", "te"})
+MI_PREFIX_TOKEN_RE = re.compile(
+    r"^mi[\s''`´\u2018\u2019\u201B\u2032]*$",
+    re.IGNORECASE,
+)
 DEFAULT_SURNAMES = [
     "Golaj", "Gashi", "Krasniqi", "Berisha", "Hoxha",
     "Leka", "Prifti", "Dibra", "Marku", "Kola",
@@ -37,7 +63,9 @@ HARDCODED_RULES_SUMMARY = [
     "Heq shkronja të vetme (A, B, …) — p.sh. «Arlind Bikliqi A» → «Arlind Bikliqi»",
     "Heq mbetje numrash+shkronjash (16z, 7z) — p.sh. «Imelda 16z» → «Imelda [mbiemër]»",
     "Ndan emra të bashkuar — p.sh. «Enkelejdafejzulla Kinaj» → «Enkelejda Fejzulla Kinaj»",
-    "Fjalë biznesi (Parukeri, Butiku, …) → «Biznes: [emri]»",
+    "Heq përsëritje emër/mbiemër — «Denis Denis Berati Berati» → «Denis Berati»",
+    "Heq etiketat Emri/Mbiemri dhe dy emra të bashkuar — «La Ti Emri Taulant Mbiemei» → «Taulant …»",
+    "Heq fjalë biznesi (Sallon, Salon, …) kur pas tyre vjen emër personi",
     "Pikë në emër (arlind.bikliqi) → Arlind Bikliqi",
     "Kapitalizon çdo fjalë",
     "Një fjalë pa mbiemër → shton mbiemër random nga lista juaj",
@@ -57,9 +85,67 @@ def capitalize_word(word: str) -> str:
     return word[0].upper() + word[1:].lower() if len(word) > 1 else word.upper()
 
 
-def contains_business_keyword(text: str) -> bool:
-    lower = text.lower()
-    return any(kw.lower() in lower for kw in HARDCODED_BUSINESS_KEYWORDS)
+def _strip_business_type_prefix(words: list[str]) -> list[str]:
+    """Heq fjalët e biznesit në fillim — «Sallon miranda» → «miranda»."""
+    out = list(words)
+    while out and out[0].lower() in BUSINESS_TYPE_WORDS:
+        out.pop(0)
+    return out
+
+
+def _normalize_unicode_text(text: str) -> str:
+    return unicodedata.normalize("NFKC", text)
+
+
+def _is_label_token(word: str) -> bool:
+    return word.strip().lower().replace("ë", "e") in NAME_LABEL_TOKENS
+
+
+def _is_garbage_name_token(word: str) -> bool:
+    """Etiketa si IG, Fl, FB — jo pjesë e emrit."""
+    w = word.strip(".'\"`´'’“”").lower()
+    if not w:
+        return True
+    if _is_label_token(w):
+        return True
+    if w in GARBAGE_NAME_TOKENS:
+        return True
+    if len(w) == 1 and w.isalpha():
+        return True
+    if MI_PREFIX_TOKEN_RE.fullmatch(w):
+        return True
+    # Dy shkronja të kodeve (IG, FL, FB)
+    if len(w) == 2 and w.isalpha() and w.upper() == w:
+        return True
+    return False
+
+
+def _strip_edge_garbage_tokens(words: list[str]) -> list[str]:
+    out = list(words)
+    while out and _is_garbage_name_token(out[0]):
+        out.pop(0)
+    while out and _is_garbage_name_token(out[-1]):
+        out.pop()
+    return out
+
+
+def _strip_trailing_garbage_text(text: str) -> str:
+    """Heq përsëri etiketat në fund (IG, Fl, A, …) derisa të stabilizohet."""
+    prev = None
+    current = text.strip()
+    while prev != current:
+        prev = current
+        current = TRAILING_GARBAGE_RE.sub("", current).strip()
+        words = current.split()
+        words = _strip_edge_garbage_tokens(words)
+        current = " ".join(words)
+    return current
+
+
+def _strip_name_prefix_noise(text: str) -> str:
+    text = BIZNES_PREFIX_RE.sub("", text.strip())
+    text = APOSTROPHE_PREFIX_RE.sub("", text.strip())
+    return text.strip()
 
 
 def _separator_char(raw: str) -> str:
@@ -181,6 +267,8 @@ def _random_full_name(surnames: list) -> str:
 def _is_valid_name_word(word: str) -> bool:
     """Fjalë e vlefshme emri/mbiemri — jo numra, jo 16z/7z, jo shkronja të vetme."""
     w = word.strip(".")
+    if _is_garbage_name_token(w):
+        return False
     if not w or w.isdigit() or re.fullmatch(r"\d+\.?\d*", w):
         return False
     if len(w) == 1 and re.fullmatch(r"[a-zA-Zà-žÀ-ŽëËçÇ]", w):
@@ -311,6 +399,8 @@ def _expand_name_tokens(text: str, rules: dict | None) -> list[str]:
     tokens: list[str] = []
     for raw in text.split():
         w = raw.strip(".")
+        if _is_garbage_name_token(w) or MI_PREFIX_TOKEN_RE.fullmatch(w.strip(".'\"`´'’")):
+            continue
         if not _is_valid_name_word(w):
             continue
         if len(w) > 10 or (len(w) > 7 and w.lower() not in vocab):
@@ -338,19 +428,20 @@ def clean_name_from_rules(value, rules: dict | None) -> str:
     if _is_numeric_only_value(value):
         return _random_full_name(surnames)
 
-    original = str(value).strip()
-    if contains_business_keyword(original):
-        return f"Biznes: {original}"
+    original = _strip_name_prefix_noise(_normalize_unicode_text(str(value).strip()))
 
     text = apply_separators(original)
+    text = PAREN_TAG_RE.sub(" ", text)
     text = apply_dot_split(text)
     text = build_symbol_pattern().sub(" ", text)
     text = re.sub(r"\s*/\s*", " ", text)
+    text = _strip_trailing_garbage_text(text)
     text = re.sub(r"\s+", " ", text).strip()
     if not text or _is_numeric_only_value(text):
         return _random_full_name(surnames)
 
-    words = _name_words(text, rules)
+    raw_tokens = _name_words(text, rules)
+    words = _finalize_name_words(raw_tokens)
     if not words:
         return _random_full_name(surnames)
     if len(words) == 1:
@@ -358,3 +449,70 @@ def clean_name_from_rules(value, rules: dict | None) -> str:
             return f"{words[0]} {random.choice(surnames)}".strip()
         return words[0]
     return " ".join(words)
+
+
+def _collapse_consecutive_duplicates(words: list[str]) -> list[str]:
+    """«Denis Denis Berati» → «Denis Berati»."""
+    if not words:
+        return words
+    out = [words[0]]
+    for w in words[1:]:
+        if w.lower() != out[-1].lower():
+            out.append(w)
+    return out
+
+
+def _dedupe_repeated_halves(words: list[str]) -> list[str]:
+    """«Arlind Bikliqi Arlind Bikliqi» → «Arlind Bikliqi»."""
+    n = len(words)
+    if n >= 2 and n % 2 == 0:
+        mid = n // 2
+        if [w.lower() for w in words[:mid]] == [w.lower() for w in words[mid:]]:
+            return words[:mid]
+    return words
+
+
+def _dedupe_name_tokens(words: list[str]) -> list[str]:
+    """Heq emra/mbiemra të përsëritur në sequence."""
+    prev = None
+    current = list(words)
+    while prev != current:
+        prev = current
+        current = _collapse_consecutive_duplicates(current)
+        current = _dedupe_repeated_halves(current)
+    return current
+
+
+def _strip_leading_noise_words(words: list[str]) -> list[str]:
+    """«La Ti Taulant» → «Taulant»."""
+    out = list(words)
+    while out and out[0].lower() in LEADING_NOISE_WORDS and len(out) > 1:
+        out.pop(0)
+    return out
+
+
+def _strip_name_label_tokens(words: list[str]) -> list[str]:
+    return [w for w in words if not _is_label_token(w)]
+
+
+def _keep_first_name_pair(words: list[str]) -> list[str]:
+    """
+    «Xhensila Gjergji Mirake Vindado» → «Xhensila Gjergji».
+    Dy çifte emër+mbiemër të bashkuara — mban vetëm të parin.
+    """
+    n = len(words)
+    if n == 4:
+        return words[:2]
+    if n >= 6 and n % 2 == 0:
+        return words[:2]
+    return words
+
+
+def _finalize_name_words(raw_tokens: list[str]) -> list[str]:
+    words = _strip_business_type_prefix([w.lower() for w in raw_tokens])
+    words = [capitalize_word(w) for w in words if _is_valid_name_word(w)]
+    words = _strip_leading_noise_words(words)
+    words = _strip_name_label_tokens(words)
+    words = _dedupe_name_tokens(words)
+    words = _keep_first_name_pair(words)
+    return _strip_edge_garbage_tokens(words)

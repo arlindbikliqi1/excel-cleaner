@@ -41,6 +41,11 @@
           </a>
         </li>
         <li>
+          <a href="{{ url_for('generation_settings') }}" class="{% if request.endpoint == 'generation_settings' %}active{% endif %}">
+            <i class="fas fa-sliders"></i> Pesha &amp; Çmimi
+          </a>
+        </li>
+        <li>
           <a href="{{ url_for('history') }}" class="{% if request.endpoint == 'history' %}active{% endif %}">
             <i class="fas fa-clock-rotate-left"></i> Historiku
           </a>

@@ -44,6 +44,14 @@ DEFAULT_SETTINGS = {
         "krem": "krem",
     },
     "name_cleaning_rules": None,
+    "random_columns": {
+        "enabled": True,
+        "pesha_min": 0.50,
+        "pesha_max": 0.96,
+        "pesha_common": [0.55, 0.60, 0.53, 0.58, 0.65, 0.68, 0.70, 0.74, 0.80],
+        "cmimi_min": 15,
+        "cmimi_max": 22,
+    },
 }
 
 
@@ -135,6 +143,20 @@ def load_settings() -> dict:
         if key not in data and default is not None:
             data[key] = deepcopy(default)
     _ensure_name_cleaning_rules(data)
+    _ensure_random_columns(data)
+    return data
+
+
+def _ensure_random_columns(data: dict) -> dict:
+    defaults = DEFAULT_SETTINGS.get("random_columns") or {}
+    cfg = data.get("random_columns")
+    if not isinstance(cfg, dict):
+        cfg = deepcopy(defaults)
+    else:
+        merged = deepcopy(defaults)
+        merged.update(cfg)
+        cfg = merged
+    data["random_columns"] = cfg
     return data
 
 
@@ -165,6 +187,16 @@ def remove_name_surname(surname: str):
     rules = get_name_cleaning_rules()
     rules["surnames"] = [s for s in rules.get("surnames", []) if s != surname]
     save_name_cleaning_rules(rules)
+
+
+def get_random_columns_settings() -> dict:
+    return deepcopy(load_settings().get("random_columns", DEFAULT_SETTINGS["random_columns"]))
+
+
+def save_random_columns_settings(cfg: dict):
+    settings = load_settings()
+    settings["random_columns"] = cfg
+    save_settings(settings)
 
 
 def save_settings(settings: dict):

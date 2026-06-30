@@ -28,7 +28,8 @@
       <span><i class="fas fa-cloud-arrow-up me-2 text-primary"></i>Ngarko Excel</span>
     </div>
     <div class="card-body">
-      <form method="post" action="{{ url_for('upload') }}" enctype="multipart/form-data" id="uploadForm">
+      <form method="post" action="{{ url_for('upload') }}" enctype="multipart/form-data" id="uploadForm"
+            data-has-last="{% if has_last_upload %}1{% else %}0{% endif %}">
         <div class="dropzone" id="dropzone" role="button" tabindex="0" aria-label="Zgjidh ose lësho skedarin Excel">
           <div class="dropzone-icon"><i class="fas fa-file-excel"></i></div>
           <h3>Tërhiq &amp; lësho skedarin këtu</h3>
@@ -37,10 +38,45 @@
             <i class="fas fa-check-circle"></i>
             <span id="selectedFileName"></span>
           </div>
-          <input type="file" name="file" id="excelFile" accept=".xlsx,.xls" required>
-          <button type="submit" class="btn btn-success btn-lg px-4">
-            <i class="fas fa-wand-magic-sparkles me-2"></i>Pastro listën
+          <input type="file" name="file" id="excelFile" accept=".xlsx,.xls" {% if not has_last_upload %}required{% endif %}>
+        </div>
+
+        <div class="row g-3 mt-3">
+          <div class="col-md-6">
+            <label for="targetTotalKg" class="form-label small fw-semibold mb-1">
+              <i class="fas fa-weight-hanging me-1 text-primary"></i>Pesha totale e listës (kg)
+            </label>
+            <input type="number" class="form-control form-control-lg" name="target_total_kg" id="targetTotalKg"
+                   min="1" step="0.01" placeholder="p.sh. 355 ose 410" required
+                   value="{{ last_target_kg if last_target_kg is not none else '' }}">
+            <div class="form-text">
+              Sistemi shpërndan Pesha/kg random për çdo rresht që totali të jetë saktësisht kjo vlerë.
+              {% if has_last_upload %}
+              Mund ta ndryshosh pa ri-ngarkuar skedarin — lëre zbrazët fushën e skedarit dhe kliko ripërpunimin.
+              {% endif %}
+            </div>
+          </div>
+          <div class="col-md-6 d-flex align-items-start">
+            <div class="small text-muted p-3 rounded-3 bg-light border w-100 h-100">
+              <strong class="text-dark">Çmimi</strong> gjenerohet automatikisht random për çdo rresht sipas ranges në
+              <a href="{{ url_for('generation_settings') }}">Settings</a>.
+              {% if row_count %}
+              <div class="mt-2 text-dark"><i class="fas fa-list-ol me-1"></i>Lista aktuale: <strong>{{ row_count }}</strong> rreshta.</div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+
+        <div class="d-flex flex-wrap gap-2 mt-3">
+          <button type="submit" class="btn btn-success btn-lg px-4" id="submitBtn">
+            <i class="fas fa-wand-magic-sparkles me-2"></i>
+            {% if has_last_upload %}Pastro / ripërpuno listën{% else %}Pastro listën{% endif %}
           </button>
+          {% if has_last_upload %}
+          <span class="align-self-center small text-muted">
+            <i class="fas fa-rotate me-1"></i>Lista e fundit është ruajtur — ndrysho vetëm peshën për ripërpunim.
+          </span>
+          {% endif %}
         </div>
       </form>
       <div class="mt-3 p-3 rounded-3 bg-light border border-light">
@@ -49,8 +85,10 @@
           <span class="badge bg-white text-dark border ms-1">Pershkrimi</span>
           <span class="badge bg-white text-dark border">Pranuesi</span>
           <span class="badge bg-white text-dark border">Shitesi</span>
+          <span class="badge bg-white text-dark border">Pesha/kg</span>
+          <span class="badge bg-white text-dark border">Çmimi</span>
           <br class="d-sm-none">
-          <span class="d-inline-block mt-1">Kodi, Pako, Pesha, Çmimi, Telefoni etj. — <em>mbeten si janë</em>.</span>
+          <span class="d-inline-block mt-1">Kodi, Pako, Origjina, Qyteti etj. — <em>mbeten si janë</em>.</span>
         </div>
       </div>
     </div>

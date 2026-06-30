@@ -9,7 +9,12 @@ from collections import Counter, defaultdict
 from pathlib import Path
 
 BASE = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(BASE / "scripts"))
 sys.path.insert(0, str(BASE))
+
+from _bootstrap_venv import ensure_project_venv
+
+ensure_project_venv()
 
 from product_training import norm_category, strip_product_noise
 

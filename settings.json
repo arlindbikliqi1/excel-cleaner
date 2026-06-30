@@ -204,7 +204,8 @@
     ],
     "DUA": [
       "bluze",
-      "veshje"
+      "veshje",
+      "pantollona"
     ],
     "DUA EYEWEAR": [
       "aksesore"
@@ -241,7 +242,10 @@
       "suplimente",
       "ulese",
       "vegel pune",
-      "veshje"
+      "veshje",
+      "arke",
+      "drie led",
+      "drite led"
     ],
     "Eddshoes": [
       "atlete",
@@ -451,7 +455,8 @@
       "xhakete"
     ],
     "LZAN": [
-      "bluze"
+      "bluze",
+      "veshje"
     ],
     "MallofBallkan": [
       "aksesore karikues",
@@ -479,7 +484,8 @@
       "fustan",
       "kemishe",
       "tuta",
-      "veshje"
+      "veshje",
+      "pantollona"
     ],
     "Maxx": [
       "bluze",
@@ -502,7 +508,9 @@
     ],
     "MOB": [
       "Drite led",
-      "Paisje per ushtrime"
+      "Paisje per ushtrime",
+      "aksesore",
+      "ulese per femije"
     ],
     "Modashoes": [
       "atlete",
@@ -544,7 +552,8 @@
     "Perfect Shop": [
       "aksesore",
       "mbulese",
-      "mbulese divani"
+      "mbulese divani",
+      "pompe uji"
     ],
     "Perla Store": [
       "bluze",
@@ -620,7 +629,8 @@
     "SHOPONLINE": [
       "fasho lidhese",
       "krem",
-      "suplimente"
+      "suplimente",
+      "shampo"
     ],
     "Simply": [
       "bluze",
@@ -656,7 +666,11 @@
       "shampo",
       "shtypese qeliku",
       "vegel pune",
-      "veshje"
+      "veshje",
+      "aksesore rrota",
+      "perde magnetike",
+      "spoiler",
+      "suplimente"
     ],
     "Tarashop SAS_veshjeislame": [
       "bluze",
@@ -671,7 +685,8 @@
       "loder",
       "raft plastike",
       "suplimente",
-      "veshje"
+      "veshje",
+      "mbulese"
     ],
     "Toponline": [
       "aksesore",
@@ -736,7 +751,8 @@
       "aksesore",
       "aksesore syze",
       "drite led",
-      "fasho lidhese"
+      "fasho lidhese",
+      "krem"
     ],
     "ZONE1": [
       "aksesore",
@@ -744,7 +760,8 @@
       "Loder rosaku",
       "pllaka celiku",
       "raft plastike",
-      "veshje"
+      "veshje",
+      "krem"
     ],
     "ALLERA FASHION": [
       "fustan"
@@ -789,6 +806,23 @@
     ],
     "WowTea": [
       "1 slim ice tea"
+    ],
+    "Kurora Handmade": [
+      "krem"
+    ],
+    "Nita Shop": [
+      "krem"
+    ],
+    "LYN": [
+      "aksesore"
+    ],
+    "OLA": [
+      "mbulese"
+    ],
+    "Star Line Fashion": [
+      "arke",
+      "t-shirt",
+      "veshje"
     ]
   },
   "surnames": [

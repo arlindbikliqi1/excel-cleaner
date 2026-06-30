@@ -45,12 +45,15 @@ from database import (
     normalize_business_name,
     remove_category_from_business,
     remove_name_surname,
+    save_random_columns_settings,
     verify_admin,
 )
 from name_cleaning import HARDCODED_RULES_SUMMARY, clean_name_from_rules
 from product_training import (
+    expand_product_word_aliases,
     import_training_from_excel,
     is_reference_training_excel,
+    match_business_training_with_mode,
     match_training_category,
     match_training_category_with_mode,
     norm_category as canonical_product_category,
@@ -58,6 +61,7 @@ from product_training import (
     strip_product_noise,
     _detect_reference_columns,
 )
+from weight_price_generator import apply_random_pesha_cmimi, get_random_columns_config
 
 BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR / "data"
@@ -406,6 +410,7 @@ def _resolve_business_category(
     business_cats_list: list,
     product_keywords: dict,
     original: str = "",
+    business_name: str = "",
 ) -> str:
     """Përputh kategori të biznesit; pa përputhje të besueshme → random."""
     if len(business_cats_list) == 1:
@@ -417,6 +422,18 @@ def _resolve_business_category(
     )
     if direct:
         return direct
+
+    # 0b) Trajnim specifik për këtë biznes (lista e pastruar)
+    if business_name:
+        biz_trained, biz_mode = match_business_training_with_mode(
+            business_name, original or normalized
+        )
+        if biz_trained:
+            biz_form = _business_category_for_norm(
+                business_cats_list, _norm_category(biz_trained)
+            )
+            if biz_form:
+                return biz_form
 
     scores: dict[str, int] = {}
     cat_by_norm = {_norm_category(cat): cat for cat in business_cats_list}
@@ -535,6 +552,7 @@ def resolve_product_category(
     product_keywords: dict,
     business_categories: dict,
     business_cats_list: list | None = None,
+    business_name: str | None = None,
 ) -> str:
     """
     Nxjerr kategorinë nga emërtimi i produktit.
@@ -551,13 +569,21 @@ def resolve_product_category(
     if not business_cats_list:
         return resolve_product_global(original, product_keywords)
 
-    normalized = strip_product_noise(original)
+    expanded = expand_product_word_aliases(original)
+    normalized = strip_product_noise(expanded)
     compact = normalized.replace(" ", "")
     tokens = _product_tokens(normalized)
     meaningful = _meaningful_tokens(tokens)
 
     return _resolve_business_category(
-        normalized, compact, tokens, meaningful, business_cats_list, product_keywords, original
+        normalized,
+        compact,
+        tokens,
+        meaningful,
+        business_cats_list,
+        product_keywords,
+        original,
+        business_name=business_name or "",
     )
 
 
@@ -592,12 +618,19 @@ def get_product_by_business(
         product_keywords,
         business_categories,
         business_cats_list,
+        business_name=str(business_name).strip() if business_name else None,
     )
     return _finalize_business_category(original, result, business_cats_list)
 
 
 def _norm_header_cell(val) -> str:
-    return str(val).strip().lower().replace("ë", "e")
+    return (
+        str(val)
+        .strip()
+        .lower()
+        .replace("ë", "e")
+        .replace("ç", "c")
+    )
 
 
 # Kolona që nuk duhen kurrë mapuar si produkt (kodi, pako, telefon, etj.)
@@ -705,9 +738,29 @@ def find_excel_column_mapping(df: pd.DataFrame) -> dict:
             "pranuesi_col": None,
             "produkti_col": None,
             "shitesi_col": None,
+            "pesha_col": None,
+            "cmimi_col": None,
             "score": 0,
         }
+    pesha_col, cmimi_col = _detect_pesha_cmimi_cols(df, best["header_row"])
+    best["pesha_col"] = pesha_col
+    best["cmimi_col"] = cmimi_col
     return best
+
+
+def _detect_pesha_cmimi_cols(df: pd.DataFrame, header_row: int | None) -> tuple[int | None, int | None]:
+    pesha_col = cmimi_col = None
+    if header_row is None:
+        return pesha_col, cmimi_col
+    for col_idx in range(df.shape[1]):
+        v = _norm_header_cell(df.iat[header_row, col_idx])
+        if not v:
+            continue
+        if "pesha" in v:
+            pesha_col = col_idx
+        elif "cmim" in v:
+            cmimi_col = col_idx
+    return pesha_col, cmimi_col
 
 
 def _forward_fill_shitesi(df: pd.DataFrame, sh_col: int, data_start: int) -> None:
@@ -926,7 +979,9 @@ def transform_reference_training_excel(filepath: str, settings: dict) -> tuple:
     return df, meta_note, out_name, processed
 
 
-def transform_excel(filepath: str, settings: dict) -> tuple:
+def transform_excel(
+    filepath: str, settings: dict, target_total_kg: float | None = None
+) -> tuple:
     """
     Lexon Excel-in të plotë, ndryshon vetëm qelizat në kolonat Pranuesi / Produkti / SHITESI,
     ruan të gjitha kolonat dhe radhitjen e rreshtave si në skedarin origjinal.
@@ -936,7 +991,10 @@ def transform_excel(filepath: str, settings: dict) -> tuple:
         raise ValueError("Excel-i është bosh.")
 
     if is_reference_training_excel(df):
-        return transform_reference_training_excel(filepath, settings)
+        df, unknown, out_name, row_count = transform_reference_training_excel(
+            filepath, settings
+        )
+        return df, unknown, out_name, row_count, {"applied": False}
 
     mapping = find_excel_column_mapping(df)
     if mapping["shitesi_col"] is None:
@@ -958,14 +1016,26 @@ def transform_excel(filepath: str, settings: dict) -> tuple:
     if sh_col is not None:
         _forward_fill_shitesi(df, sh_col, data_start)
 
+    produkti_cols = _produkti_columns(df, mapping)
+    order_row_indices = [
+        i
+        for i in range(data_start, len(df))
+        if _is_order_data_row(df, i, mapping, produkti_cols)
+    ]
+
+    gen_meta = apply_random_pesha_cmimi(
+        df,
+        mapping,
+        settings,
+        order_row_indices,
+        target_total_kg=target_total_kg,
+    )
+
     unknown_businesses = collect_unknown_businesses_full(df, mapping, settings)
 
     pr_col = mapping["pranuesi_col"]
-    produkti_cols = _produkti_columns(df, mapping)
 
-    for row_idx in range(data_start, len(df)):
-        if not _is_order_data_row(df, row_idx, mapping, produkti_cols):
-            continue
+    for row_idx in order_row_indices:
         shitesi_val = _shitesi_for_row(df, row_idx, sh_col, data_start) if sh_col is not None else ""
 
         if sh_col is not None and not _is_blank_cell(df.iat[row_idx, sh_col]):
@@ -1001,7 +1071,7 @@ def transform_excel(filepath: str, settings: dict) -> tuple:
         out_path, index=False, header=False, engine="openpyxl", na_rep=""
     )
 
-    return df, unknown_businesses, out_name, data_row_count
+    return df, unknown_businesses, out_name, data_row_count, gen_meta
 
 
 def save_last_upload(source_path: Path):
@@ -1022,7 +1092,11 @@ def refresh_detect_result_in_session():
 
 
 def save_dashboard_preview(
-    df: pd.DataFrame, unknown: list, out_name: str, row_count: int | None = None
+    df: pd.DataFrame,
+    unknown: list,
+    out_name: str,
+    row_count: int | None = None,
+    target_kg: float | None = None,
 ):
     """Preview në disk — session cookie nuk mbajnë tabela të mëdha (>4KB)."""
     preview_df = _prepare_df_for_export(df)
@@ -1037,6 +1111,7 @@ def save_dashboard_preview(
         "last_download": out_name,
         "row_count": row_count if row_count is not None else len(df),
         "unknown_businesses": unknown,
+        "last_target_kg": target_kg,
     }
     PREVIEW_META_PATH.write_text(
         json.dumps(meta, ensure_ascii=False), encoding="utf-8"
@@ -1051,6 +1126,8 @@ def load_dashboard_preview() -> dict:
             "last_download": None,
             "unknown_businesses": [],
             "row_count": None,
+            "last_target_kg": None,
+            "has_last_upload": LAST_UPLOAD_FILE.exists(),
         }
     preview_html = PREVIEW_HTML_PATH.read_text(encoding="utf-8")
     meta = {}
@@ -1064,6 +1141,8 @@ def load_dashboard_preview() -> dict:
         "last_download": meta.get("last_download"),
         "unknown_businesses": meta.get("unknown_businesses", []),
         "row_count": meta.get("row_count"),
+        "last_target_kg": meta.get("last_target_kg"),
+        "has_last_upload": LAST_UPLOAD_FILE.exists(),
     }
 
 
@@ -1116,25 +1195,51 @@ def dashboard():
 @app.route("/upload", methods=["POST"])
 @login_required
 def upload():
-    if "file" not in request.files or not request.files["file"].filename:
+    file = request.files.get("file")
+    has_new_file = file is not None and bool(file.filename)
+
+    if not has_new_file and not LAST_UPLOAD_FILE.exists():
         flash("Zgjidhni një skedar Excel.", "warning")
         return redirect(url_for("dashboard"))
 
-    file = request.files["file"]
-    original_name = file.filename
-    filename = secure_filename(original_name)
-    if not filename.lower().endswith((".xlsx", ".xls")):
-        flash("Lejohen vetëm skedarë .xlsx ose .xls.", "warning")
+    target_total_kg = None
+    target_raw = request.form.get("target_total_kg", "").strip().replace(",", ".")
+    if target_raw:
+        try:
+            target_total_kg = float(target_raw)
+            if target_total_kg <= 0:
+                raise ValueError("negative")
+        except ValueError:
+            flash("Pesha totale e listës duhet të jetë një numër pozitiv (p.sh. 410).", "warning")
+            return redirect(url_for("dashboard"))
+    else:
+        flash("Vendosni pesha totale të listës në kg.", "warning")
         return redirect(url_for("dashboard"))
 
-    save_path = UPLOAD_FOLDER / filename
-    file.save(save_path)
+    reprocess = False
+    if has_new_file:
+        original_name = file.filename
+        filename = secure_filename(original_name)
+        if not filename.lower().endswith((".xlsx", ".xls")):
+            flash("Lejohen vetëm skedarë .xlsx ose .xls.", "warning")
+            return redirect(url_for("dashboard"))
+        save_path = UPLOAD_FOLDER / filename
+        file.save(save_path)
+    else:
+        save_path = LAST_UPLOAD_FILE
+        original_name = save_path.name
+        reprocess = True
 
     try:
         settings = load_settings()
-        df, unknown, out_name, row_count = transform_excel(str(save_path), settings)
-        save_last_upload(save_path)
-        save_dashboard_preview(df, unknown, out_name, row_count)
+        df, unknown, out_name, row_count, gen_meta = transform_excel(
+            str(save_path), settings, target_total_kg=target_total_kg
+        )
+        if has_new_file:
+            save_last_upload(save_path)
+        save_dashboard_preview(
+            df, unknown, out_name, row_count, target_kg=target_total_kg
+        )
 
         username = current_user.id if current_user.is_authenticated else "admin"
         log_job(original_name, out_name, row_count, username)
@@ -1145,10 +1250,22 @@ def upload():
             unknown = []
 
         flash(
-            f"Excel u transformua me sukses. {row_count} rreshta të dhënash u përpunuan "
-            f"(të gjitha kolonat u ruajtën).",
+            f"Excel u transformua me sukses. {row_count} rreshta të dhënash u përpunuan.",
             "success",
         )
+        if reprocess:
+            flash("Lista e fundit u ripërpunua me peshën e re.", "info")
+        if gen_meta.get("applied"):
+            parts = []
+            if gen_meta.get("target_kg"):
+                parts.append(
+                    f"Pesha: {gen_meta['rows']} rreshta → {gen_meta.get('pesha_sum', 0)} kg"
+                )
+            if gen_meta.get("cmimi_generated"):
+                cfg = get_random_columns_config(settings)
+                parts.append(f"Çmimi random {cfg['cmimi_min']}–{cfg['cmimi_max']}")
+            if parts:
+                flash("Gjenerim random: " + " · ".join(parts) + ".", "info")
         if dg_msg:
             flash(dg_msg, "info")
         if unknown:
@@ -1161,7 +1278,7 @@ def upload():
     except Exception as exc:
         flash(f"Gabim gjatë përpunimit: {exc}", "danger")
     finally:
-        if save_path.exists() and save_path != LAST_UPLOAD_FILE:
+        if has_new_file and save_path.exists() and save_path != LAST_UPLOAD_FILE:
             save_path.unlink(missing_ok=True)
 
     return redirect(url_for("dashboard"))
@@ -1291,6 +1408,51 @@ def detect_unknown():
         )
 
     return redirect(url_for("businesses"))
+
+
+@app.route("/generation-settings", methods=["GET", "POST"])
+@login_required
+def generation_settings():
+    if request.method == "POST":
+        common_raw = request.form.get("pesha_common", "")
+        common_vals = []
+        for part in common_raw.replace(";", ",").split(","):
+            part = part.strip().replace(",", ".")
+            if not part:
+                continue
+            try:
+                common_vals.append(float(part))
+            except ValueError:
+                continue
+
+        try:
+            pesha_min = float(request.form.get("pesha_min", "0.5").replace(",", "."))
+            pesha_max = float(request.form.get("pesha_max", "0.96").replace(",", "."))
+            cmimi_min = int(request.form.get("cmimi_min", "15"))
+            cmimi_max = int(request.form.get("cmimi_max", "22"))
+        except ValueError:
+            flash("Vlerat e ranges duhet të jenë numra të vlefshëm.", "warning")
+            return redirect(url_for("generation_settings"))
+
+        if pesha_min > pesha_max:
+            pesha_min, pesha_max = pesha_max, pesha_min
+        if cmimi_min > cmimi_max:
+            cmimi_min, cmimi_max = cmimi_max, cmimi_min
+
+        cfg = {
+            "enabled": request.form.get("enabled") == "on",
+            "pesha_min": pesha_min,
+            "pesha_max": pesha_max,
+            "pesha_common": common_vals or get_random_columns_config({})["pesha_common"],
+            "cmimi_min": cmimi_min,
+            "cmimi_max": cmimi_max,
+        }
+        save_random_columns_settings(cfg)
+        flash("Settings për Pesha & Çmimi u ruajtën.", "success")
+        return redirect(url_for("generation_settings"))
+
+    cfg = get_random_columns_config(load_settings())
+    return render_template("generation_settings.html", cfg=cfg)
 
 
 @app.route("/recipient-rules", methods=["GET", "POST"])

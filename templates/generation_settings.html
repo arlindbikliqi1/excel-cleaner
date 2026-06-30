@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}Pesha &amp; Çmimi - Excel Cleaner{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Ranges për Pesha &amp; Çmimi</h1>
+  <p class="subtitle">Admini cakton intervalet random — pesha shpesh del 0.55, 0.60, 0.53 etj.; çmimi është random për çdo rresht.</p>
+</div>
+
+<div class="row g-4">
+  <div class="col-lg-7">
+    <div class="card-app">
+      <div class="card-header">
+        <i class="fas fa-sliders me-2 text-primary"></i>Konfigurimi
+      </div>
+      <div class="card-body">
+        <form method="post">
+          <div class="form-check form-switch mb-4">
+            <input class="form-check-input" type="checkbox" role="switch" id="enabled" name="enabled"
+                   {% if cfg.enabled %}checked{% endif %}>
+            <label class="form-check-label fw-semibold" for="enabled">Aktivizo gjenerimin random</label>
+          </div>
+
+          <h6 class="fw-bold text-dark mb-3"><i class="fas fa-weight-hanging me-2 text-muted"></i>Pesha/kg</h6>
+          <div class="row g-3 mb-4">
+            <div class="col-sm-4">
+              <label class="form-label small">Min (kg)</label>
+              <input type="number" class="form-control" name="pesha_min" step="0.01" min="0.01"
+                     value="{{ cfg.pesha_min }}" required>
+            </div>
+            <div class="col-sm-4">
+              <label class="form-label small">Max (kg)</label>
+              <input type="number" class="form-control" name="pesha_max" step="0.01" min="0.01"
+                     value="{{ cfg.pesha_max }}" required>
+            </div>
+            <div class="col-12">
+              <label class="form-label small">Vlera të shpeshta (ndarë me presje)</label>
+              <input type="text" class="form-control" name="pesha_common"
+                     value="{{ cfg.pesha_common | join(', ') }}"
+                     placeholder="0.55, 0.60, 0.53, 0.58">
+              <div class="form-text">~78% e rreshtave marrin një nga këto vlera (nëse janë brenda min–max).</div>
+            </div>
+          </div>
+
+          <h6 class="fw-bold text-dark mb-3"><i class="fas fa-tag me-2 text-muted"></i>Çmimi</h6>
+          <div class="row g-3 mb-4">
+            <div class="col-sm-4">
+              <label class="form-label small">Min</label>
+              <input type="number" class="form-control" name="cmimi_min" step="1"
+                     value="{{ cfg.cmimi_min }}" required>
+            </div>
+            <div class="col-sm-4">
+              <label class="form-label small">Max</label>
+              <input type="number" class="form-control" name="cmimi_max" step="1"
+                     value="{{ cfg.cmimi_max }}" required>
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-primary">
+            <i class="fas fa-save me-1"></i>Ruaj settings
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    <div class="card-app h-100">
+      <div class="card-header" style="background:#eff6ff">
+        <span class="text-primary"><i class="fas fa-circle-info me-2"></i>Si funksionon</span>
+      </div>
+      <div class="card-body small text-muted">
+        <ul class="mb-0 ps-3">
+          <li class="mb-2">Kur ngarkon listën, vendos <strong class="text-dark">pesha totale</strong> (p.sh. 410 kg).</li>
+          <li class="mb-2">Sistemi shpërndan pesha random për çdo rresht që totali të jetë i barabartë me këtë vlerë.</li>
+          <li class="mb-2">Çmimi gjenerohet random për çdo rresht — nuk ka total të caktuar paraprakisht.</li>
+          <li>Gjenerimi bëhet <em>para</em> pastrimit të emrave dhe mapimit të produkteve.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

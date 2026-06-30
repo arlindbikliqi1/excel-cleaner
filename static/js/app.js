@@ -34,7 +34,9 @@
     }
 
     dropzone.addEventListener("click", function (e) {
-      if (e.target.closest("button")) return;
+      if (e.target.closest("button, input, label, a, select, textarea, .form-control")) {
+        return;
+      }
       fileInput.click();
     });
 
@@ -64,11 +66,19 @@
     });
 
     if (uploadForm) {
-      uploadForm.addEventListener("submit", function () {
+      uploadForm.addEventListener("submit", function (e) {
+        const hasFile = fileInput.files && fileInput.files.length > 0;
+        const hasLast = uploadForm.dataset.hasLast === "1";
+        if (!hasFile && !hasLast) {
+          e.preventDefault();
+          alert("Zgjidhni një skedar Excel për ngarkim.");
+          return;
+        }
         const btn = uploadForm.querySelector('button[type="submit"]');
         if (btn && !btn.disabled) {
           btn.disabled = true;
-          btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Duke përpunuar...';
+          btn.innerHTML =
+            '<span class="spinner-border spinner-border-sm me-2"></span>Duke përpunuar...';
         }
       });
     }

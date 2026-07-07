@@ -112,9 +112,12 @@ CATEGORY_ALIASES = {
     "tekstil": "mbulese",
     "komplet": "mbulese",
     "komplete": "mbulese",
-    "fustana": "fustan",
-    "fustane": "fustan",
-    "fustanin": "fustan",
+    "fust": "bluze",
+    "fustan": "bluze",
+    "fustana": "bluze",
+    "fustane": "bluze",
+    "fustanin": "bluze",
+    "fustanet": "bluze",
 }
 
 app = Flask(__name__)
@@ -174,6 +177,33 @@ def _norm_category(text: str) -> str:
     return normalize_product_text(text).replace("ë", "e")
 
 
+def _is_fustan_category(text: str) -> bool:
+    norm = _norm_category(text)
+    return norm in ("fustan", "fustana", "fustane", "fustanin", "fustanet", "fust")
+
+
+def _fustan_to_bluze(
+    category: str, business_cats_list: list | None = None
+) -> str:
+    """Kurrë mos kthe fustan — gjithmonë bluze."""
+    if not category or not _is_fustan_category(category):
+        return category
+    if business_cats_list:
+        matched = _business_category_for_norm(business_cats_list, "bluze")
+        if matched:
+            return matched
+    return "bluze"
+
+
+def _text_mentions_fustan(normalized: str, tokens: list, meaningful: list) -> bool:
+    if "fustan" in normalized:
+        return True
+    return any(
+        t.startswith("fustan") or t in ("fustana", "fustane", "fustanin", "fustanet", "fust")
+        for t in meaningful + tokens
+    )
+
+
 def _business_category_for_norm(categories: list, target_norm: str) -> str | None:
     for cat in categories:
         if _norm_category(cat) == target_norm:
@@ -192,12 +222,17 @@ def _beautify_category_output(
     if business_cats_list:
         matched = _business_category_for_norm(business_cats_list, norm)
         if matched:
-            return matched
-    return canonical_product_category(cleaned)
+            return _fustan_to_bluze(matched, business_cats_list)
+    return _fustan_to_bluze(canonical_product_category(cleaned), business_cats_list)
 
 
 def _pick_business_fallback(business_cats_list: list) -> str:
-    return random.choice(business_cats_list)
+    pool = [
+        cat
+        for cat in business_cats_list
+        if not _is_fustan_category(cat)
+    ] or business_cats_list
+    return _fustan_to_bluze(random.choice(pool), business_cats_list)
 
 
 def _finalize_business_category(
@@ -207,11 +242,11 @@ def _finalize_business_category(
     if not business_cats_list:
         return result
     if len(business_cats_list) == 1:
-        return business_cats_list[0]
+        return _fustan_to_bluze(business_cats_list[0], business_cats_list)
 
     matched = _business_category_for_norm(business_cats_list, _norm_category(result))
     if matched:
-        return matched
+        return _fustan_to_bluze(matched, business_cats_list)
 
     # Kurrë mos kthe emrin origjinal të produktit si kategori
     if _norm_category(result) == _norm_category(original):
@@ -236,9 +271,14 @@ def _direct_business_category_match(
     normalized: str, tokens: list, meaningful: list, business_cats_list: list
 ) -> str | None:
     """
-    Kategori e biznesit që shfaqet qartë në tekst (fustan, bluze, tuta…).
+    Kategori e biznesit që shfaqet qartë në tekst (bluze, tuta…).
     Ka prioritet mbi listën globale DG.
     """
+    if _text_mentions_fustan(normalized, tokens, meaningful):
+        bluze = _business_category_for_norm(business_cats_list, "bluze")
+        if bluze:
+            return bluze
+
     cat_by_norm = {_norm_category(cat): cat for cat in business_cats_list}
 
     for token in meaningful:
@@ -414,9 +454,9 @@ def _resolve_business_category(
 ) -> str:
     """Përputh kategori të biznesit; pa përputhje të besueshme → random."""
     if len(business_cats_list) == 1:
-        return business_cats_list[0]
+        return _fustan_to_bluze(business_cats_list[0], business_cats_list)
 
-    # 0) Kategori e biznesit në tekst (fustan → fustan) — para DG globale
+    # 0) Kategori e biznesit në tekst — para DG globale
     direct = _direct_business_category_match(
         normalized, tokens, meaningful, business_cats_list
     )
@@ -490,13 +530,18 @@ def resolve_product_global(product_name, product_keywords: dict) -> str:
     if not original or original.lower() in ("nan", "none"):
         return ""
 
-    trained, mode = match_training_category_with_mode(original)
-    if trained:
-        return _beautify_category_output(trained)
-
-    normalized = strip_product_noise(original)
+    expanded = expand_product_word_aliases(original)
+    normalized = strip_product_noise(expanded)
     compact = normalized.replace(" ", "")
     tokens = _product_tokens(normalized)
+    meaningful = _meaningful_tokens(tokens)
+
+    if _text_mentions_fustan(normalized, tokens, meaningful):
+        return "bluze"
+
+    trained, mode = match_training_category_with_mode(original)
+    if trained:
+        return _fustan_to_bluze(_beautify_category_output(trained))
 
     best_cat = None
     best_score = 0

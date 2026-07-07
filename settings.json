@@ -54,7 +54,6 @@
     ],
     "ARBI": [
       "bluze",
-      "fustan",
       "korset",
       "t-shirt",
       "tuta"
@@ -68,7 +67,6 @@
     "Avia Fushe Kosove": [
       "bluze",
       "tuta",
-      "fustan",
       "veshje"
     ],
     "Babyshop Maid": [
@@ -109,7 +107,6 @@
     "Butiku Albi": [
       "bluze",
       "fund",
-      "fustan",
       "kemishe",
       "pantollona",
       "t-shirt",
@@ -124,7 +121,6 @@
     ],
     "Butiku Enisi": [
       "bluze",
-      "fustan",
       "t-shirt",
       "tuta"
     ],
@@ -179,11 +175,10 @@
     ],
     "DIMAL FASHION": [
       "bluze",
-      "fustan",
       "pantollona"
     ],
     "DONA DRESS": [
-      "fustan",
+      "bluze",
       "pantollona",
       "tuta",
       "veshje"
@@ -269,7 +264,6 @@
     "FASHIONA": [
       "bluze",
       "fund",
-      "fustan",
       "kemishe",
       "pantollona",
       "t-shirt",
@@ -353,7 +347,6 @@
     "KASTRATI FASHION": [
       "bluze",
       "fund",
-      "fustan",
       "kemishe",
       "pantollona",
       "tuta",
@@ -412,10 +405,9 @@
     ],
     "LKK R": [
       "komplete",
-      "fustan",
+      "bluze",
       "tuta",
-      "veshje",
-      "bluze"
+      "veshje"
     ],
     "Lori Fashion": [
       "bluze"
@@ -427,7 +419,6 @@
     ],
     "LORIFASHION2": [
       "bluze",
-      "fustan",
       "tuta",
       "veshje"
     ],
@@ -447,7 +438,6 @@
     "LuxuryFashion": [
       "bluze",
       "fund",
-      "fustan",
       "kemishe",
       "pantollona",
       "tuta",
@@ -481,7 +471,6 @@
     ],
     "MARMO": [
       "bluze",
-      "fustan",
       "kemishe",
       "tuta",
       "veshje",
@@ -529,8 +518,7 @@
       "bluze"
     ],
     "NOIRCORP1": [
-      "bluze",
-      "Fustan"
+      "bluze"
     ],
     "NOVA": [
       "pantollona",
@@ -616,7 +604,6 @@
     ],
     "SARASHOP MODEST": [
       "bluze",
-      "fustan",
       "tuta",
       "veshje"
     ],
@@ -733,7 +720,6 @@
     "V D": [
       "bluze",
       "fund",
-      "fustan",
       "kemishe",
       "pantollona",
       "t-shirt",
@@ -764,7 +750,7 @@
       "krem"
     ],
     "ALLERA FASHION": [
-      "fustan"
+      "bluze"
     ],
     "AriMalll": [
       "set tushi",
@@ -987,7 +973,7 @@
     "111": "aksesore",
     "12": "veshje",
     "123": "mbulese",
-    "126495": "fustan",
+    "126495": "bluze",
     "140she": "mbulese divani",
     "15": "aksesore",
     "15:00": "veshje",
@@ -1398,15 +1384,15 @@
     "ftyren": "krem",
     "fuatane": "bluze",
     "fund": "fund",
-    "fust": "fustan",
-    "fustan": "veshje",
-    "fustan 126495": "fustan",
+    "fust": "bluze",
+    "fustan": "bluze",
+    "fustan 126495": "bluze",
     "fustan 1x35€ trenerak 1x13€ posta 5€": "bluze",
     "fustan 1x50": "bluze",
-    "fustan 1x50 5": "veshje",
+    "fustan 1x50 5": "bluze",
     "fustan 1x50 posta 5": "bluze",
     "fustan 1x65 posta 5": "bluze",
-    "fustan 1x75€ posta 5€": "tuta",
+    "fustan 1x75€ posta 5€": "bluze",
     "fustan blu": "bluze",
     "fustan blu masa 44": "bluze",
     "fustan i kalter masa 46": "bluze",
@@ -1423,11 +1409,11 @@
     "fustan ngjyra ne foto masa 50": "bluze",
     "fustan ngjyra si në foto masa 40": "bluze",
     "fustan shall": "bluze",
-    "fustana": "veshje",
+    "fustana": "bluze",
     "fustana 2x35€ posta 5€": "bluze",
-    "fustane": "tuta",
-    "fustanet": "fustan",
-    "fustanin": "fustan",
+    "fustane": "bluze",
+    "fustanet": "bluze",
+    "fustanin": "bluze",
     "fytyr": "krem",
     "fëmijë": "veshje",
     "g3": "tuta",
@@ -2619,5 +2605,23 @@
       "Zoto",
       "Çela"
     ]
+  },
+  "random_columns": {
+    "enabled": true,
+    "pesha_min": 0.5,
+    "pesha_max": 0.96,
+    "pesha_common": [
+      0.55,
+      0.6,
+      0.53,
+      0.58,
+      0.65,
+      0.68,
+      0.7,
+      0.74,
+      0.8
+    ],
+    "cmimi_min": 15,
+    "cmimi_max": 22
   }
 }

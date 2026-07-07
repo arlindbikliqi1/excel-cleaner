@@ -19,13 +19,13 @@ SETTINGS_PATH = BASE_DIR / "settings.json"
 
 DEFAULT_SETTINGS = {
     "business_categories": {
-        "FASHIONA": ["tuta", "fustan", "fund", "pantolla", "komplet"],
+        "FASHIONA": ["tuta", "bluze", "fund", "pantolla", "komplet"],
         "Andrra Online": ["krem", "suplimente", "shampo"],
         "FLETA SHOP": ["suplimente", "krem", "sprej"],
         "INFINITYSHOP": ["suplimente", "krem", "aksesor"],
         "ARBI": ["bodi", "korset", "tekstil"],
-        "Butiku Enisi": ["bluze", "fustan"],
-        "LuxuryFashion": ["fustan", "pantolla", "veshje"],
+        "Butiku Enisi": ["bluze"],
+        "LuxuryFashion": ["bluze", "pantolla", "veshje"],
         "Toponline": ["elektronike", "aksesor"],
         "ZONE": ["tekstil", "pajisje"],
     },
@@ -64,6 +64,62 @@ def _ensure_name_cleaning_rules(data: dict) -> dict:
     data["name_cleaning_rules"] = {"surnames": list(surnames)}
     data["surnames"] = list(surnames)
     return data
+
+
+FUSTAN_CATEGORY_NAMES = frozenset(
+    {"fustan", "fustana", "fustane", "fustanin", "fustanet", "fust"}
+)
+
+
+def _norm_cat_key(text: str) -> str:
+    return str(text).strip().lower().replace("ë", "e")
+
+
+def _remap_fustan_category_value(value: str) -> str:
+    if _norm_cat_key(value) in FUSTAN_CATEGORY_NAMES:
+        return "bluze"
+    return str(value).strip()
+
+
+def _ensure_fustan_removed(data: dict) -> bool:
+    """Zëvendëson fustan me bluze në kategoritë e bizneseve dhe fjalëkyçet."""
+    changed = False
+
+    biz = data.get("business_categories", {})
+    if isinstance(biz, dict):
+        for name, cats in biz.items():
+            if not isinstance(cats, list):
+                continue
+            new_cats: list[str] = []
+            seen: set[str] = set()
+            for cat in cats:
+                cat2 = _remap_fustan_category_value(cat)
+                key = _norm_cat_key(cat2)
+                if key not in seen:
+                    seen.add(key)
+                    new_cats.append(cat2)
+                if cat2 != cat:
+                    changed = True
+            if new_cats != cats:
+                biz[name] = new_cats
+                changed = True
+
+    kw = data.get("product_keywords", {})
+    if isinstance(kw, dict):
+        for key, value in list(kw.items()):
+            value2 = _remap_fustan_category_value(value)
+            key_norm = _norm_cat_key(key)
+            if (
+                "fustan" in key_norm
+                or key_norm in FUSTAN_CATEGORY_NAMES
+                or key_norm.startswith("fust")
+            ):
+                value2 = "bluze"
+            if value2 != value:
+                kw[key] = value2
+                changed = True
+
+    return changed
 
 
 def get_connection():
@@ -144,6 +200,8 @@ def load_settings() -> dict:
             data[key] = deepcopy(default)
     _ensure_name_cleaning_rules(data)
     _ensure_random_columns(data)
+    if _ensure_fustan_removed(data):
+        save_settings(data)
     return data
 
 

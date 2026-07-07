@@ -19,6 +19,12 @@ CATEGORY_CANONICAL = {
     "shtrenguese gjuri": "shtrenguese per gjunje",
     "loder rosak": "loder rosaku",
     "aksesore ": "aksesore",
+    "fust": "bluze",
+    "fustan": "bluze",
+    "fustana": "bluze",
+    "fustane": "bluze",
+    "fustanin": "bluze",
+    "fustanet": "bluze",
 }
 
 QTY_PREFIX = re.compile(

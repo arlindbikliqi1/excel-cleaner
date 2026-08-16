@@ -19,9 +19,13 @@ HARDCODED_SYMBOLS = [
 ]
 # Fjalë biznesi — vetëm si fjalë të plota (jo nën-varg, p.sh. «spa» në «spahiu»)
 BUSINESS_TYPE_WORDS = frozenset({
-    "parukeri", "butiku", "sukin", "farmaci", "spa", "qender", "sallon", "salon",
+    "parukeri", "butiku", "butik", "sukin", "farmaci", "spa", "qender", "sallon", "salon",
     "beaty", "beauty", "barber", "shop", "store", "dyqan", "klinike",
+    "lashes", "nails", "studio", "market", "supermarket", "veshje",
+    "online", "shpk", "kozmetike", "boutique",
 })
+# Fjalë lidhëse në emra biznesi — «Lashes By Glenda» → «Glenda»
+CONNECTOR_NOISE_WORDS = frozenset({"by", "and", "of", "dhe", "nga", "per"})
 BIZNES_PREFIX_RE = re.compile(r"^(?:biznes\s*:\s*)+", re.IGNORECASE)
 APOSTROPHE_PREFIX_RE = re.compile(
     r"^mi[\s''`´\u2018\u2019\u201B\u2032]+\s*",
@@ -64,8 +68,10 @@ HARDCODED_RULES_SUMMARY = [
     "Heq mbetje numrash+shkronjash (16z, 7z) — p.sh. «Imelda 16z» → «Imelda [mbiemër]»",
     "Ndan emra të bashkuar — p.sh. «Enkelejdafejzulla Kinaj» → «Enkelejda Fejzulla Kinaj»",
     "Heq përsëritje emër/mbiemër — «Denis Denis Berati Berati» → «Denis Berati»",
+    "Heq përsëritje edhe jo-fqinje — «Gena Seferi Gena» → «Gena Seferi»",
     "Heq etiketat Emri/Mbiemri dhe dy emra të bashkuar — «La Ti Emri Taulant Mbiemei» → «Taulant …»",
-    "Heq fjalë biznesi (Sallon, Salon, …) kur pas tyre vjen emër personi",
+    "Heq fjalë biznesi kudo (Sallon, Butik, Shop, Online, Shpk, Lashes, …)",
+    "Heq fjalë lidhëse — «Lashes By Glenda» → «Glenda [mbiemër]»",
     "Pikë në emër (arlind.bikliqi) → Arlind Bikliqi",
     "Kapitalizon çdo fjalë",
     "Një fjalë pa mbiemër → shton mbiemër random nga lista juaj",
@@ -86,10 +92,13 @@ def capitalize_word(word: str) -> str:
 
 
 def _strip_business_type_prefix(words: list[str]) -> list[str]:
-    """Heq fjalët e biznesit në fillim — «Sallon miranda» → «miranda»."""
-    out = list(words)
-    while out and out[0].lower() in BUSINESS_TYPE_WORDS:
-        out.pop(0)
+    """Heq fjalët e biznesit kudo — «Sallon miranda» → «miranda», «Kela Online» → «Kela»."""
+    out = [
+        w
+        for w in words
+        if w.lower() not in BUSINESS_TYPE_WORDS
+        and w.lower() not in CONNECTOR_NOISE_WORDS
+    ]
     return out
 
 
@@ -472,6 +481,21 @@ def _dedupe_repeated_halves(words: list[str]) -> list[str]:
     return words
 
 
+def _dedupe_repeated_anywhere(words: list[str]) -> list[str]:
+    """«Gena Seferi Gena» → «Gena Seferi» — mban vetëm shfaqjen e parë."""
+    if len(words) < 3:
+        return words
+    seen: set[str] = set()
+    out: list[str] = []
+    for w in words:
+        key = w.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(w)
+    return out if len(out) >= 2 else words
+
+
 def _dedupe_name_tokens(words: list[str]) -> list[str]:
     """Heq emra/mbiemra të përsëritur në sequence."""
     prev = None
@@ -480,6 +504,7 @@ def _dedupe_name_tokens(words: list[str]) -> list[str]:
         prev = current
         current = _collapse_consecutive_duplicates(current)
         current = _dedupe_repeated_halves(current)
+        current = _dedupe_repeated_anywhere(current)
     return current
 
 

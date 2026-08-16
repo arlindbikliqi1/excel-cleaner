@@ -117,7 +117,8 @@
       "bluze"
     ],
     "Butiku Edi": [
-      "krem"
+      "krem",
+      "pantollona"
     ],
     "Butiku Enisi": [
       "bluze",
@@ -159,7 +160,9 @@
     ],
     "CLOTHINGSV": [
       "bluze",
-      "kemishe"
+      "kemishe",
+      "pantollona",
+      "veshje"
     ],
     "Cozy": [
       "mbulese"
@@ -240,7 +243,15 @@
       "veshje",
       "arke",
       "drie led",
-      "drite led"
+      "drite led",
+      "akseosre varese",
+      "aksesore cante",
+      "aksesore korigjues",
+      "aksesore laps",
+      "aksesore mbulese",
+      "aksesore ngjites",
+      "aksesore ventilatore",
+      "fasho lidhese"
     ],
     "Eddshoes": [
       "atlete",
@@ -332,7 +343,9 @@
     ],
     "ITECH": [
       "aksesore",
-      "tuta"
+      "tuta",
+      "aksesore cante",
+      "t-shirt"
     ],
     "janinafashionstore": [
       "bluze",
@@ -657,7 +670,11 @@
       "aksesore rrota",
       "perde magnetike",
       "spoiler",
-      "suplimente"
+      "suplimente",
+      "aksesore depilatore",
+      "aksesore laps",
+      "aksesore masazher",
+      "aksesore ngjites"
     ],
     "Tarashop SAS_veshjeislame": [
       "bluze",
@@ -673,7 +690,10 @@
       "raft plastike",
       "suplimente",
       "veshje",
-      "mbulese"
+      "mbulese",
+      "aksesore mbrojtese",
+      "aksesore ngjites",
+      "jastek ortopedik"
     ],
     "Toponline": [
       "aksesore",
@@ -709,7 +729,10 @@
       "top fleksibil",
       "tuta",
       "vegel pune",
-      "veshje"
+      "veshje",
+      "aksesore mbulese",
+      "t-shirt",
+      "veshje ortopedik"
     ],
     "TREGUONLINEALB": [
       "Aksesore"
@@ -809,6 +832,75 @@
       "arke",
       "t-shirt",
       "veshje"
+    ],
+    "Tinytales": [
+      "liber"
+    ],
+    "LPP Z": [
+      "bluze",
+      "drite led",
+      "veshje"
+    ],
+    "LPP G": [
+      "bluze"
+    ],
+    "LKK V": [
+      "kemishe"
+    ],
+    "Bikini _Fit": [
+      "tuta"
+    ],
+    "Buyonline": [
+      "krem",
+      "suplimente"
+    ],
+    "LF-Online": [
+      "bluze",
+      "tuta",
+      "veshje"
+    ],
+    "AcsStore": [
+      "aksesore"
+    ],
+    "ALP TECH": [
+      "aksesore"
+    ],
+    "onlineRe": [
+      "bluze",
+      "mbulese"
+    ],
+    "DitaShop": [
+      "aksesore",
+      "fasho lidhese",
+      "krem",
+      "shampo",
+      "suplimente"
+    ],
+    "DailyShop": [
+      "aksesore",
+      "fasho lidhese",
+      "krem",
+      "suplimente"
+    ],
+    "MegaShop": [
+      "fasho lidhese",
+      "krem"
+    ],
+    "Fiatshop": [
+      "fasho lidhese",
+      "krem",
+      "suplimente"
+    ],
+    "GogiMarkt": [
+      "fasho lidhese",
+      "suplimente"
+    ],
+    "FreshLine": [
+      "aksesore per kopsht me rrota",
+      "krem"
+    ],
+    "PIKOOUTFIT": [
+      "bluze"
     ]
   },
   "surnames": [

@@ -93,10 +93,17 @@ CATEGORY_ALIASES = {
     "pantalla": "pantollona",
     "pantolla": "pantollona",
     "pantolon": "pantollona",
+    "pantoll": "pantollona",
     "kmishe": "kemishe",
     "kmise": "kemishe",
     "trenerka": "tuta",
     "trenerk": "tuta",
+    "trenerke": "tuta",
+    "trenerkat": "tuta",
+    "pigjam": "bluze",
+    "pigjama": "bluze",
+    "bluza": "bluze",
+    "bluzat": "bluze",
     "sete": "veshje",
     "lodra": "loder",
     "lodrat": "loder",
@@ -118,6 +125,7 @@ CATEGORY_ALIASES = {
     "fustane": "bluze",
     "fustanin": "bluze",
     "fustanet": "bluze",
+    "fustani": "bluze",
 }
 
 app = Flask(__name__)
@@ -239,6 +247,19 @@ def _finalize_business_category(
     original: str, result: str, business_cats_list: list
 ) -> str:
     """Output = gjithmonë kategori nga lista e biznesit; kurrë emri origjinal i produktit."""
+    mentions_fustan = bool(
+        re.search(
+            r"\bfust(?:an\w*)?\b",
+            normalize_product_text(expand_product_word_aliases(original)),
+        )
+    )
+    # Rregulli fustan→bluze nuk anulohet edhe nëse biznesi nuk e ka bluze në listë.
+    if mentions_fustan or _is_fustan_category(result):
+        return (
+            _business_category_for_norm(business_cats_list, "bluze")
+            or "bluze"
+        )
+
     if not business_cats_list:
         return result
     if len(business_cats_list) == 1:
@@ -453,17 +474,19 @@ def _resolve_business_category(
     business_name: str = "",
 ) -> str:
     """Përputh kategori të biznesit; pa përputhje të besueshme → random."""
+    # Rregull absolut i sistemit: çdo variant i fustanit kthehet bluze,
+    # edhe nëse një listë e vjetër trajnimi ka kategori kontradiktore.
+    if _text_mentions_fustan(normalized, tokens, meaningful):
+        return (
+            _business_category_for_norm(business_cats_list, "bluze")
+            or "bluze"
+        )
+
     if len(business_cats_list) == 1:
         return _fustan_to_bluze(business_cats_list[0], business_cats_list)
 
-    # 0) Kategori e biznesit në tekst — para DG globale
-    direct = _direct_business_category_match(
-        normalized, tokens, meaningful, business_cats_list
-    )
-    if direct:
-        return direct
-
-    # 0b) Trajnim specifik për këtë biznes (lista e pastruar)
+    # 0) Trajnim specifik për këtë biznes — burimi më i besueshëm (lista e pastruar)
+    biz_form = None
     if business_name:
         biz_trained, biz_mode = match_business_training_with_mode(
             business_name, original or normalized
@@ -472,17 +495,25 @@ def _resolve_business_category(
             biz_form = _business_category_for_norm(
                 business_cats_list, _norm_category(biz_trained)
             )
-            if biz_form:
+            if biz_form and not _is_fustan_category(biz_form):
                 return biz_form
+
+    # 1) Kategori e biznesit në tekst — para DG globale
+    direct = _direct_business_category_match(
+        normalized, tokens, meaningful, business_cats_list
+    )
+    if direct:
+        return direct
+
+    if biz_form:
+        return _fustan_to_bluze(biz_form, business_cats_list)
 
     scores: dict[str, int] = {}
     cat_by_norm = {_norm_category(cat): cat for cat in business_cats_list}
 
     # 1) Lista DG — vetëm nëse nuk ka përputhje direkte më sipër
     trained_form, train_mode = _map_training_to_business(original or normalized, business_cats_list)
-    if trained_form and train_mode == "exact":
-        return trained_form
-    if trained_form and train_mode == "phrase":
+    if trained_form and train_mode in ("exact", "signature", "fuzzy", "phrase", "token"):
         return trained_form
     if trained_form:
         norm = _norm_category(trained_form)
@@ -575,6 +606,12 @@ def map_product_cell(
     original = str(product_name).strip()
     if not original or original.lower() in ("nan", "none"):
         return ""
+
+    # Rregull absolut, para kufizimit me kategoritë e biznesit.
+    # Kap fustan/fustana/fustane edhe brenda emërtimeve të gjata.
+    fustan_check = normalize_product_text(expand_product_word_aliases(original))
+    if re.search(r"\bfust(?:an\w*)?\b", fustan_check):
+        return "bluze"
 
     business_cats_list = None
     if shitesi_val:

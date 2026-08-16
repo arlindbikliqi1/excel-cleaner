@@ -2,6 +2,9 @@ from __future__ import annotations
 
 import json
 import re
+import unicodedata
+from collections import Counter
+from difflib import SequenceMatcher
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -35,6 +38,21 @@ QTY_PREFIX = re.compile(
 # Shkurtesa / fjalë të parregullta → forma e plotë (nga lista referencë)
 WORD_TOKEN_ALIASES = {
     "tekstild": "tekstil",
+    "teksitl": "tekstil",
+    "teksil": "tekstil",
+    "fustn": "fustan",
+    "fustna": "fustan",
+    "fusana": "fustan",
+    "fuatane": "fustan",
+    "fustani": "fustan",
+    "pantoll": "pantollona",
+    "pantolla": "pantollona",
+    "trenerke": "trenerka",
+    "trenerkat": "trenerka",
+    "pigjam": "pigjama",
+    "pigjama": "pigjama",
+    "bluza": "bluze",
+    "bluzat": "bluze",
     "arom": "aromatizues",
     "aromat": "aromatizues",
     "det": "detergjent",
@@ -86,6 +104,177 @@ def compact_text(text: str) -> str:
     return strip_product_noise(text).replace(" ", "")
 
 
+def _search_tokens(text: str) -> list[str]:
+    """Tokena stabilë për variante pikësimi, aksentesh dhe rendi fjalësh."""
+    expanded = expand_product_word_aliases(text)
+    normalized = unicodedata.normalize("NFKD", strip_product_noise(expanded))
+    ascii_text = "".join(ch for ch in normalized if not unicodedata.combining(ch))
+    return re.findall(r"[a-z0-9]+", ascii_text.lower())
+
+
+def _search_signature(text: str) -> str:
+    """I njëjti produkt me rend tjetër fjalësh merr të njëjtën nënshkrim."""
+    return " ".join(sorted(_search_tokens(text)))
+
+
+def _fuzzy_training_match(
+    product_name: str, exact: dict[str, str]
+) -> tuple[str | None, str]:
+    """
+    Gjen variante me typo të vogla. Kthen rezultat vetëm me prag të lartë dhe
+    kur kategoria fituese ndahet qartë nga kategori të tjera.
+    """
+    query_tokens = _search_tokens(product_name)
+    if not query_tokens:
+        return None, ""
+    query_signature = " ".join(sorted(query_tokens))
+    query_compact = "".join(query_tokens)
+    if len(query_compact) < 5:
+        return None, ""
+
+    # Rend tjetër fjalësh / pikësim tjetër: përputhje e sigurt pa fuzzy.
+    signature_hits = [
+        (key, cat)
+        for key, cat in exact.items()
+        if _search_signature(key) == query_signature
+    ]
+    signature_categories = {cat for _, cat in signature_hits}
+    if len(signature_categories) == 1:
+        return next(iter(signature_categories)), "signature"
+    if len(signature_categories) > 1:
+        # Kontradiktë në trajnim: kërko shumicë të qartë, përndryshe mos gjej.
+        votes = Counter(cat for _, cat in signature_hits)
+        top_cat, top_n = votes.most_common(1)[0]
+        second_n = votes.most_common(2)[1][1] if len(votes) > 1 else 0
+        if top_n >= 2 and top_n > second_n:
+            return top_cat, "signature"
+        return None, ""
+
+    best_by_category: dict[str, float] = {}
+    for key, cat in exact.items():
+        key_tokens = _search_tokens(key)
+        if not key_tokens:
+            continue
+        key_compact = "".join(key_tokens)
+        # Gjatësi shumë të ndryshme zakonisht janë produkte të ndryshme.
+        length_ratio = min(len(query_compact), len(key_compact)) / max(
+            len(query_compact), len(key_compact)
+        )
+        if length_ratio < 0.72:
+            continue
+
+        query_set, key_set = set(query_tokens), set(key_tokens)
+        overlap = query_set & key_set
+        token_score = len(overlap) / max(len(query_set | key_set), 1)
+        # Multi-token: kërko overlap real. Single-token: lëri pragun e lartë.
+        if len(query_tokens) >= 2 and len(overlap) < 2 and token_score < 0.5:
+            continue
+
+        char_score = SequenceMatcher(None, query_compact, key_compact).ratio()
+        sorted_score = SequenceMatcher(
+            None, query_signature, " ".join(sorted(key_tokens))
+        ).ratio()
+        score = max(char_score, sorted_score, 0.55 * sorted_score + 0.45 * token_score)
+        if score > best_by_category.get(cat, 0.0):
+            best_by_category[cat] = score
+
+    if not best_by_category:
+        return None, ""
+    ranked = sorted(best_by_category.items(), key=lambda item: item[1], reverse=True)
+    best_cat, best_score = ranked[0]
+    second_score = ranked[1][1] if len(ranked) > 1 else 0.0
+    threshold = 0.94 if len(query_compact) < 8 else 0.88
+    if best_score >= threshold and best_score - second_score >= 0.06:
+        return best_cat, "fuzzy"
+    return None, ""
+
+
+def _phrase_matches_query(phrase: str, query: str) -> bool:
+    """Përputhje fraze me kufij tokenash — jo substring i pasigurt."""
+    phrase_tokens = set(_search_tokens(phrase))
+    if not phrase_tokens:
+        return False
+    query_tokens = set(_search_tokens(query))
+    if not phrase_tokens.issubset(query_tokens):
+        return False
+    # Bag i plotë = signature/exact; phrase vetëm për nënvarg të vërtetë.
+    if phrase_tokens == query_tokens:
+        return False
+    content = [t for t in phrase_tokens if len(t) >= 4]
+    if content:
+        return True
+    phrase_compact = "".join(phrase_tokens)
+    return len(phrase_tokens) >= 2 and len(phrase_compact) >= 10
+
+
+_TOKEN_MODEL_STOPWORDS = frozenset(
+    {
+        "cope", "copa", "cop", "pako", "paketa", "masa", "model", "kodi",
+        "ngjyra", "foto", "eshte", "jane", "dhe", "edhe", "nga", "per", "me",
+        "nje", "dy", "set", "pal", "tekstil", "artikull", "produkt",
+        "bardhe", "bardh", "zeze", "zi", "kuqe", "blu", "jeshile", "bezhe",
+        "roze", "kafe", "gri", "verdh", "portokalli",
+        "small", "medium", "large",
+    }
+)
+
+
+def _business_token_training_match(
+    product_name: str, exact: dict[str, str]
+) -> tuple[str | None, str]:
+    """
+    Për emërtime të reja, përdor fjalë dalluese që janë parë të paktën dy herë
+    me të njëjtën kategori te i njëjti biznes. Fjalët e përgjithshme përjashtohen.
+    """
+    query_tokens = {
+        token
+        for token in _search_tokens(product_name)
+        if len(token) >= 4
+        and not any(ch.isdigit() for ch in token)
+        and token not in _TOKEN_MODEL_STOPWORDS
+    }
+    if not query_tokens:
+        return None, ""
+
+    token_votes: dict[str, Counter] = {}
+    seen_examples: set[tuple[str, str]] = set()
+    for key, cat in exact.items():
+        signature = _search_signature(key)
+        example = (signature, cat)
+        if not signature or example in seen_examples:
+            continue
+        seen_examples.add(example)
+        for token in set(_search_tokens(key)):
+            if (
+                len(token) >= 4
+                and not any(ch.isdigit() for ch in token)
+                and token not in _TOKEN_MODEL_STOPWORDS
+            ):
+                token_votes.setdefault(token, Counter())[cat] += 1
+
+    scores: Counter = Counter()
+    evidence: Counter = Counter()
+    for token in query_tokens:
+        counts = token_votes.get(token)
+        if not counts:
+            continue
+        cat, top_count = counts.most_common(1)[0]
+        total = sum(counts.values())
+        purity = top_count / total
+        if top_count >= 2 and purity >= 0.85:
+            scores[cat] += 1.0 + min(top_count, 5) * 0.2
+            evidence[cat] += 1
+
+    if not scores:
+        return None, ""
+    ranked = scores.most_common()
+    best_cat, best_score = ranked[0]
+    second_score = ranked[1][1] if len(ranked) > 1 else 0.0
+    if evidence[best_cat] >= 1 and best_score - second_score >= 0.8:
+        return best_cat, "token"
+    return None, ""
+
+
 def load_training_data() -> dict:
     if not TRAINING_PATH.exists():
         return {"pairs": [], "phrases": {}}
@@ -133,15 +322,29 @@ def _business_training_index(data: dict) -> dict[str, dict[str, str]]:
         if not biz_key or not isinstance(mapping, dict):
             continue
         exact: dict[str, str] = {}
+        # Së pari ruaj format origjinale. Kur një typo-alias bashkon dy çelësa
+        # kontradiktorë (p.sh. tekstil/teksitl), forma e saktë ka prioritet.
         for src, cat in mapping.items():
             if not src or not cat:
                 continue
-            key = strip_product_noise(expand_product_word_aliases(src))
+            key = strip_product_noise(src)
             if key:
                 exact[key] = norm_category(cat)
-            full = normalize_product_text(expand_product_word_aliases(src))
+            full = normalize_product_text(src)
             if full:
                 exact[full] = norm_category(cat)
+        # Pastaj shto variantet e zgjeruara vetëm kur nuk mbishkruajnë një
+        # emërtim real të trajnuar.
+        for src, cat in mapping.items():
+            if not src or not cat:
+                continue
+            expanded = expand_product_word_aliases(src)
+            key = strip_product_noise(expanded)
+            if key:
+                exact.setdefault(key, norm_category(cat))
+            full = normalize_product_text(expanded)
+            if full:
+                exact.setdefault(full, norm_category(cat))
         if exact:
             out[biz_key] = exact
     return out
@@ -447,10 +650,15 @@ def match_business_training_with_mode(
     if not exact:
         return None, ""
 
+    raw_normalized = normalize_product_text(product_name)
+    raw_stripped = strip_product_noise(product_name)
+    for key in (raw_stripped, raw_normalized):
+        if key in exact:
+            return exact[key], "exact"
+
     expanded = expand_product_word_aliases(product_name)
     normalized = normalize_product_text(expanded)
     stripped = strip_product_noise(expanded)
-
     for key in (stripped, normalized):
         if key in exact:
             return exact[key], "exact"
@@ -460,9 +668,17 @@ def match_business_training_with_mode(
         if len(key) >= 5 and compact_text(key) == compact:
             return cat, "exact"
 
+    fuzzy_cat, fuzzy_mode = _fuzzy_training_match(expanded, exact)
+    if fuzzy_cat:
+        return fuzzy_cat, fuzzy_mode
+
     for key, cat in sorted(exact.items(), key=lambda x: len(x[0]), reverse=True):
-        if len(key) >= 5 and (key in stripped or key in normalized):
+        if len(key) >= 5 and _phrase_matches_query(key, expanded):
             return cat, "phrase"
+
+    token_cat, token_mode = _business_token_training_match(expanded, exact)
+    if token_cat:
+        return token_cat, token_mode
     return None, ""
 
 
@@ -491,10 +707,12 @@ def match_training_category_with_mode(product_name: str) -> tuple[str | None, st
         if len(key_compact) >= 6 and key_compact == compact:
             return cat, "exact"
 
+    fuzzy_cat, fuzzy_mode = _fuzzy_training_match(expanded, exact)
+    if fuzzy_cat:
+        return fuzzy_cat, fuzzy_mode
+
     for phrase, cat in phrases:
-        if phrase in stripped or phrase in normalized:
-            return cat, "phrase"
-        if len(phrase) >= 5 and phrase.replace(" ", "") in compact:
+        if len(phrase) >= 5 and _phrase_matches_query(phrase, expanded):
             return cat, "phrase"
 
     return None, ""

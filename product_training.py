@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import re
 import unicodedata
-from collections import Counter
+from collections import Counter, defaultdict
 from difflib import SequenceMatcher
 from pathlib import Path
 
@@ -89,6 +89,39 @@ def norm_category(text: str) -> str:
     return CATEGORY_CANONICAL.get(c, c)
 
 
+MODEL_CODE_RE = re.compile(r"\b[a-z]{1,4}[-_]?\d{3,}[a-z0-9]*\b", re.IGNORECASE)
+
+
+def get_category_display(norm_cat: str) -> str:
+    """Forma e shfaqjes së kategorisë (si kolona C e Excel-it)."""
+    if not norm_cat:
+        return norm_cat
+    data = load_training_data()
+    labels = data.get("category_labels") or {}
+    norm = norm_category(norm_cat)
+    return labels.get(norm, str(norm_cat).strip())
+
+
+def _pick_category_winner(votes: Counter) -> str:
+    """Zgjedh kategori nga votat; barazim → kategoria më specifike (më e gjatë)."""
+    if not votes:
+        return ""
+    ranked = votes.most_common()
+    top_count = ranked[0][1]
+    tied = [cat for cat, count in ranked if count == top_count]
+    if len(tied) == 1:
+        return tied[0]
+    return max(tied, key=len)
+
+
+def _model_stripped_key(text: str) -> str:
+    """Heq kode modeli (sf-9134, dh-4006) për përputhje të afërt."""
+    t = normalize_product_text(strip_product_noise(expand_product_word_aliases(text)))
+    t = MODEL_CODE_RE.sub(" ", t)
+    t = re.sub(r"\b\d+\b", " ", t)
+    return re.sub(r"\s+", " ", t).strip()
+
+
 def strip_product_noise(text: str) -> str:
     """Heq sasinë në fillim: «2 cop», «50 cop», «3cop» …"""
     t = normalize_product_text(text)
@@ -101,7 +134,16 @@ def strip_product_noise(text: str) -> str:
 
 
 def compact_text(text: str) -> str:
-    return strip_product_noise(text).replace(" ", "")
+    t = strip_product_noise(text).replace(" ", "")
+    return t.replace("-", "").replace("_", "")
+
+
+def _split_model_token(token: str) -> list[str]:
+    """Ndaj kode si sf9134 → sf + 9134 (variante pa vizë/hapësirë)."""
+    match = re.fullmatch(r"([a-z]{1,4})(\d{3,}[a-z0-9]*)", token, re.IGNORECASE)
+    if match:
+        return [match.group(1).lower(), match.group(2).lower()]
+    return [token]
 
 
 def _search_tokens(text: str) -> list[str]:
@@ -109,7 +151,11 @@ def _search_tokens(text: str) -> list[str]:
     expanded = expand_product_word_aliases(text)
     normalized = unicodedata.normalize("NFKD", strip_product_noise(expanded))
     ascii_text = "".join(ch for ch in normalized if not unicodedata.combining(ch))
-    return re.findall(r"[a-z0-9]+", ascii_text.lower())
+    raw = re.findall(r"[a-z0-9]+", ascii_text.lower())
+    tokens: list[str] = []
+    for token in raw:
+        tokens.extend(_split_model_token(token))
+    return tokens
 
 
 def _search_signature(text: str) -> str:
@@ -308,6 +354,7 @@ def _training_index(data: dict) -> tuple[dict[str, str], list[tuple[str, str]]]:
 
 _CACHE: tuple[dict[str, str], list[tuple[str, str]]] | None = None
 _BIZ_CACHE: dict[str, dict[str, str]] | None = None
+_REF_TOKEN_INDEX: dict[str, list[str]] | None = None
 
 
 def _normalize_business_key(name: str) -> str:
@@ -365,9 +412,88 @@ def _get_business_index() -> dict[str, dict[str, str]]:
 
 
 def reload_training_cache() -> None:
-    global _CACHE, _BIZ_CACHE
+    global _CACHE, _BIZ_CACHE, _REF_TOKEN_INDEX
     _CACHE = None
     _BIZ_CACHE = None
+    _REF_TOKEN_INDEX = None
+
+
+def _get_ref_token_index() -> dict[str, list[str]]:
+    global _REF_TOKEN_INDEX
+    if _REF_TOKEN_INDEX is not None:
+        return _REF_TOKEN_INDEX
+    exact, _ = _get_index()
+    index: dict[str, set[str]] = {}
+    for key in exact:
+        for token in set(_search_tokens(key)):
+            if len(token) >= 3:
+                index.setdefault(token, set()).add(key)
+    _REF_TOKEN_INDEX = {t: sorted(keys) for t, keys in index.items()}
+    return _REF_TOKEN_INDEX
+
+
+def _reference_candidate_keys(product_name: str, exact: dict[str, str]) -> list[str]:
+    """Filtron çelësat e referencës që ndajnë fjalë me query-n."""
+    query_tokens = _search_tokens(product_name)
+    if not query_tokens:
+        return []
+    scores: Counter = Counter()
+    token_index = _get_ref_token_index()
+    for token in query_tokens:
+        if len(token) < 3:
+            continue
+        for key in token_index.get(token, []):
+            scores[key] += 1
+    if not scores:
+        return []
+    query_set = set(query_tokens)
+    candidates: list[str] = []
+    for key, shared in scores.most_common(40):
+        key_tokens = set(_search_tokens(key))
+        overlap = query_set & key_tokens
+        if shared >= 2 or any(len(t) >= 5 for t in overlap):
+            candidates.append(key)
+    if not candidates:
+        candidates = [scores.most_common(1)[0][0]]
+    return candidates
+
+
+def _match_reference_closest(
+    product_name: str, exact: dict[str, str]
+) -> tuple[str | None, str]:
+    """Gjen kategori më të afërt nga listat referencë (3 Excel)."""
+    expanded = expand_product_word_aliases(product_name)
+    normalized = normalize_product_text(expanded)
+    stripped = strip_product_noise(expanded)
+
+    for key in (stripped, normalized, _model_stripped_key(expanded)):
+        if key and key in exact:
+            return exact[key], "exact"
+
+    compact = compact_text(expanded)
+    for key, cat in exact.items():
+        if len(key) >= 5 and compact_text(key) == compact:
+            return cat, "exact"
+
+    fuzzy_cat, fuzzy_mode = _fuzzy_training_match(expanded, exact)
+    if fuzzy_cat:
+        return fuzzy_cat, fuzzy_mode
+
+    candidates = _reference_candidate_keys(expanded, exact)
+    if candidates:
+        subset = {k: exact[k] for k in candidates if k in exact}
+        fuzzy_cat, fuzzy_mode = _fuzzy_training_match(expanded, subset)
+        if fuzzy_cat:
+            return fuzzy_cat, "reference"
+
+    skeleton = _model_stripped_key(expanded)
+    if len(skeleton) >= 4:
+        sk_hits = [cat for key, cat in exact.items() if _model_stripped_key(key) == skeleton]
+        if sk_hits:
+            winner = _pick_category_winner(Counter(sk_hits))
+            if winner:
+                return winner, "reference"
+    return None, ""
 
 
 def import_training_from_excel(path: Path | str) -> tuple[int, int]:
@@ -449,12 +575,13 @@ def import_training_from_excel(path: Path | str) -> tuple[int, int]:
 
 
 def import_cleaned_list_training(path: Path | str) -> dict:
-    """
-    Importon listë të pastruar: Pershkrimi (kol. e parregullt) → kategori (kol. e djathtë).
-    Ruan edhe mapime specifike për çdo SHITESI.
-    """
+    """Importon një listë referencë (Pershkrimi → kategori)."""
+    return import_multiple_cleaned_lists([path], merge_with_existing=True)
+
+
+def _iter_cleaned_list_rows(path: Path | str):
+    """Rreshta (src, kategori, shitesi) nga Excel referencë."""
     import pandas as pd
-    from collections import Counter, defaultdict
 
     path = Path(path)
     df = pd.read_excel(path, header=None, engine="openpyxl")
@@ -462,7 +589,7 @@ def import_cleaned_list_training(path: Path | str) -> dict:
     if src_col is None:
         src_col, tgt_col = _detect_reference_columns(df)
     if src_col is None or tgt_col is None:
-        raise ValueError("Nuk u gjet Pershkrimi → kategori në Excel.")
+        raise ValueError(f"Nuk u gjet Pershkrimi → kategori në {path.name}.")
 
     shitesi_col = None
     data_start = 1
@@ -476,71 +603,102 @@ def import_cleaned_list_training(path: Path | str) -> dict:
         if shitesi_col is not None:
             break
 
-    global_votes: dict[str, Counter] = defaultdict(Counter)
-    biz_votes: dict[str, dict[str, Counter]] = defaultdict(lambda: defaultdict(Counter))
-    biz_cats: dict[str, set[str]] = defaultdict(set)
-    row_count = 0
-
     for row_idx in range(data_start, len(df)):
         src = df.iat[row_idx, src_col] if src_col < df.shape[1] else None
         tgt = df.iat[row_idx, tgt_col] if tgt_col < df.shape[1] else None
         if src is None or tgt is None:
             continue
         src_s = str(src).strip()
-        tgt_s = norm_category(str(tgt).strip())
+        tgt_s = str(tgt).strip()
         if not src_s or src_s.lower() in ("nan", "none", "pershkrimi"):
             continue
         if not tgt_s or tgt_s.lower() in ("nan", "none"):
             continue
-        row_count += 1
-        key = strip_product_noise(src_s)
-        if key:
-            global_votes[key][tgt_s] += 1
         biz = ""
         if shitesi_col is not None:
             biz = str(df.iat[row_idx, shitesi_col]).strip()
             if biz.lower() in ("nan", "none", "shitesi"):
                 biz = ""
-        if biz and key:
-            biz_votes[biz][key][tgt_s] += 1
-            biz_cats[biz].add(tgt_s)
+        yield src_s, tgt_s, biz
+
+
+def import_multiple_cleaned_lists(
+    paths: list[Path | str], merge_with_existing: bool = False
+) -> dict:
+    """
+    Importon një ose më shumë lista referencë (kol. B → kol. C).
+    Kombinon votat nga të gjitha skedarët; barazim → kategoria më specifike.
+    """
+    combined_global: dict[str, Counter] = defaultdict(Counter)
+    combined_biz: dict[str, dict[str, Counter]] = defaultdict(lambda: defaultdict(Counter))
+    display_votes: dict[str, Counter] = defaultdict(Counter)
+    biz_cats: dict[str, set[str]] = defaultdict(set)
+    row_count = 0
+
+    for path in paths:
+        path = Path(path)
+        if not path.exists():
+            raise FileNotFoundError(str(path))
+        for src_s, tgt_s, biz in _iter_cleaned_list_rows(path):
+            row_count += 1
+            key = strip_product_noise(src_s)
+            cat = norm_category(tgt_s)
+            if not key or not cat:
+                continue
+            combined_global[key][cat] += 1
+            display_votes[cat][tgt_s.strip()] += 1
+            if biz:
+                combined_biz[biz][key][cat] += 1
+                biz_cats[biz].add(tgt_s.strip())
 
     existing = load_training_data()
-    exact_global = {k: c.most_common(1)[0][0] for k, c in global_votes.items()}
+    if merge_with_existing:
+        for item in existing.get("pairs", []):
+            key = strip_product_noise(item.get("source", ""))
+            cat = norm_category(item.get("category", ""))
+            if key and cat:
+                combined_global[key][cat] += 1
+        for biz, mapping in existing.get("by_business", {}).items():
+            if not isinstance(mapping, dict):
+                continue
+            for src, cat in mapping.items():
+                key = strip_product_noise(src)
+                c = norm_category(cat)
+                if key and c:
+                    combined_biz[biz][key][c] += 1
+                    biz_cats[biz].add(str(cat).strip())
 
-    pairs_seen: set[str] = set()
-    pairs = []
-    for key, cat in exact_global.items():
-        if key in pairs_seen:
-            continue
-        pairs_seen.add(key)
-        pairs.append({"source": key, "category": cat})
+    exact_global = {k: _pick_category_winner(v) for k, v in combined_global.items()}
+    category_labels = {
+        cat: votes.most_common(1)[0][0] for cat, votes in display_votes.items()
+    }
+    for cat in exact_global.values():
+        category_labels.setdefault(cat, cat)
 
-    for p in existing.get("pairs", []):
-        key = strip_product_noise(p.get("source", ""))
-        if key and key not in pairs_seen:
-            pairs_seen.add(key)
-            pairs.append(p)
-
-    phrases = dict(existing.get("phrases", {}))
-    phrases.update(exact_global)
-    for src_key, counter in global_votes.items():
+    pairs = [{"source": key, "category": cat} for key, cat in exact_global.items()]
+    phrases = dict(exact_global)
+    for src_key, counter in combined_global.items():
         for phrase, _ in counter.most_common(3):
             if len(phrase) >= 4:
                 phrases[phrase] = exact_global[src_key]
 
-    by_business = dict(existing.get("by_business", {}))
-    for biz, key_map in biz_votes.items():
-        merged = dict(by_business.get(biz, {}))
-        for key, counter in key_map.items():
-            merged[key] = counter.most_common(1)[0][0]
-        by_business[biz] = merged
+    by_business: dict[str, dict[str, str]] = {}
+    for biz, key_map in combined_biz.items():
+        by_business[biz] = {
+            key: _pick_category_winner(counter) for key, counter in key_map.items()
+        }
+
+    if merge_with_existing:
+        for biz, mapping in existing.get("by_business", {}).items():
+            if biz not in by_business:
+                by_business[biz] = dict(mapping)
 
     payload = {
         "pairs": pairs,
         "phrases": phrases,
         "by_business": by_business,
-        "word_aliases": dict(WORD_TOKEN_ALIASES),
+        "word_aliases": dict(existing.get("word_aliases") or WORD_TOKEN_ALIASES),
+        "category_labels": category_labels,
     }
     TRAINING_PATH.parent.mkdir(exist_ok=True)
     with open(TRAINING_PATH, "w", encoding="utf-8") as f:
@@ -550,8 +708,9 @@ def import_cleaned_list_training(path: Path | str) -> dict:
     return {
         "rows": row_count,
         "pairs": len(pairs),
-        "businesses": len(biz_votes),
+        "businesses": len(by_business),
         "biz_categories": {k: sorted(v) for k, v in biz_cats.items()},
+        "files": [str(Path(p).name) for p in paths],
     }
 
 
@@ -650,28 +809,11 @@ def match_business_training_with_mode(
     if not exact:
         return None, ""
 
-    raw_normalized = normalize_product_text(product_name)
-    raw_stripped = strip_product_noise(product_name)
-    for key in (raw_stripped, raw_normalized):
-        if key in exact:
-            return exact[key], "exact"
+    cat, mode = _match_reference_closest(product_name, exact)
+    if cat:
+        return cat, mode
 
     expanded = expand_product_word_aliases(product_name)
-    normalized = normalize_product_text(expanded)
-    stripped = strip_product_noise(expanded)
-    for key in (stripped, normalized):
-        if key in exact:
-            return exact[key], "exact"
-
-    compact = compact_text(expanded)
-    for key, cat in exact.items():
-        if len(key) >= 5 and compact_text(key) == compact:
-            return cat, "exact"
-
-    fuzzy_cat, fuzzy_mode = _fuzzy_training_match(expanded, exact)
-    if fuzzy_cat:
-        return fuzzy_cat, fuzzy_mode
-
     for key, cat in sorted(exact.items(), key=lambda x: len(x[0]), reverse=True):
         if len(key) >= 5 and _phrase_matches_query(key, expanded):
             return cat, "phrase"
@@ -693,24 +835,11 @@ def match_training_category_with_mode(product_name: str) -> tuple[str | None, st
         return None, ""
 
     exact, phrases = _get_index()
+    cat, mode = _match_reference_closest(product_name, exact)
+    if cat:
+        return cat, mode
+
     expanded = expand_product_word_aliases(product_name)
-    normalized = normalize_product_text(expanded)
-    stripped = strip_product_noise(expanded)
-
-    for key in (stripped, normalized):
-        if key in exact:
-            return exact[key], "exact"
-
-    compact = compact_text(expanded)
-    for key, cat in exact.items():
-        key_compact = compact_text(key)
-        if len(key_compact) >= 6 and key_compact == compact:
-            return cat, "exact"
-
-    fuzzy_cat, fuzzy_mode = _fuzzy_training_match(expanded, exact)
-    if fuzzy_cat:
-        return fuzzy_cat, fuzzy_mode
-
     for phrase, cat in phrases:
         if len(phrase) >= 5 and _phrase_matches_query(phrase, expanded):
             return cat, "phrase"

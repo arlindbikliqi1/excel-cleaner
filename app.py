@@ -51,6 +51,7 @@ from database import (
 from name_cleaning import HARDCODED_RULES_SUMMARY, clean_name_from_rules
 from product_training import (
     expand_product_word_aliases,
+    get_category_display,
     import_training_from_excel,
     is_reference_training_excel,
     match_business_training_with_mode,
@@ -230,8 +231,10 @@ def _beautify_category_output(
     if business_cats_list:
         matched = _business_category_for_norm(business_cats_list, norm)
         if matched:
-            return _fustan_to_bluze(matched, business_cats_list)
-    return _fustan_to_bluze(canonical_product_category(cleaned), business_cats_list)
+            return get_category_display(_fustan_to_bluze(matched, business_cats_list))
+    return get_category_display(
+        _fustan_to_bluze(canonical_product_category(cleaned), business_cats_list)
+    )
 
 
 def _pick_business_fallback(business_cats_list: list) -> str:
@@ -572,7 +575,7 @@ def resolve_product_global(product_name, product_keywords: dict) -> str:
 
     trained, mode = match_training_category_with_mode(original)
     if trained:
-        return _fustan_to_bluze(_beautify_category_output(trained))
+        return get_category_display(_fustan_to_bluze(trained))
 
     best_cat = None
     best_score = 0
@@ -590,7 +593,7 @@ def resolve_product_global(product_name, product_keywords: dict) -> str:
             best_score = score
             best_cat = mapped
 
-    return best_cat if best_cat else original
+    return get_category_display(best_cat) if best_cat else original
 
 
 def map_product_cell(

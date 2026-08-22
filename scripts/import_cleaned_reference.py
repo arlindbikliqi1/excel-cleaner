@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Importon listë të pastruar (Pershkrimi → kategori) + përditëson shitësit."""
+"""Importon lista referencë LINDI (Pershkrimi → kategori) + përditëson shitësit."""
 from __future__ import annotations
 
 import json
@@ -14,10 +14,14 @@ from _bootstrap_venv import ensure_project_venv
 
 ensure_project_venv()
 
-from product_training import import_cleaned_list_training
+from product_training import import_multiple_cleaned_lists
 
 SETTINGS_PATH = BASE / "settings.json"
-DEFAULT_PATH = BASE / "uploads" / "cleaned_20260629_220724.xlsx"
+DEFAULT_PATHS = [
+    BASE / "uploads" / "LINDI LISTA DOGANA.xlsx",
+    BASE / "uploads" / "LINDI DOGANA 2.xlsx",
+    BASE / "uploads" / "LINDI DOGANA 3.xlsx",
+]
 
 
 def merge_business_categories(biz_cats: dict) -> int:
@@ -39,15 +43,25 @@ def merge_business_categories(biz_cats: dict) -> int:
 
 
 def main():
-    path = Path(sys.argv[1]) if len(sys.argv) > 1 else DEFAULT_PATH
-    if not path.exists():
-        print(f"Skedari nuk ekziston: {path}")
+    if len(sys.argv) > 1:
+        paths = [Path(p) for p in sys.argv[1:]]
+    else:
+        paths = [p for p in DEFAULT_PATHS if p.exists()]
+
+    if not paths:
+        print("Asnjë skedar referencë nuk u gjet.")
         raise SystemExit(1)
 
-    result = import_cleaned_list_training(path)
+    for p in paths:
+        if not p.exists():
+            print(f"Skedari nuk ekziston: {p}")
+            raise SystemExit(1)
+
+    result = import_multiple_cleaned_lists(paths, merge_with_existing=False)
     added_cats = merge_business_categories(result["biz_categories"])
 
-    print(f"Importuar {result['rows']} rreshta")
+    print(f"Importuar {result['rows']} rreshta nga {len(paths)} skedarë")
+    print("Skedarët:", ", ".join(result.get("files", [])))
     print(f"Çifte globale: {result['pairs']}")
     print(f"Biznese me trajnim: {result['businesses']}")
     print(f"Kategori të reja në settings: {added_cats}")

@@ -1,7 +1,8 @@
 {
   "business_categories": {
     "4G": [
-      "t-shirt"
+      "t-shirt",
+      "bluze"
     ],
     "A Fashion": [
       "bluze",
@@ -40,7 +41,8 @@
       "suplimente",
       "t-shirt",
       "tuta",
-      "veshje"
+      "veshje",
+      "bluze"
     ],
     "Amra Kids": [
       "bluze",
@@ -128,7 +130,8 @@
     "Butiku Erdi": [
       "bluze",
       "kemishe",
-      "veshje"
+      "veshje",
+      "pantollona"
     ],
     "Butiku Lumi": [
       "bluze"
@@ -150,7 +153,8 @@
       "pantollona"
     ],
     "Butiku77": [
-      "bluze"
+      "bluze",
+      "veshje"
     ],
     "butikuLF": [
       "bluze"
@@ -178,7 +182,8 @@
     ],
     "DIMAL FASHION": [
       "bluze",
-      "pantollona"
+      "pantollona",
+      "veshje"
     ],
     "DONA DRESS": [
       "bluze",
@@ -251,7 +256,12 @@
       "aksesore mbulese",
       "aksesore ngjites",
       "aksesore ventilatore",
-      "fasho lidhese"
+      "fasho lidhese",
+      "Sprej",
+      "aksesore organizues",
+      "aksesore per insekte",
+      "aksesore raft",
+      "akssore"
     ],
     "Eddshoes": [
       "atlete",
@@ -349,7 +359,8 @@
     ],
     "janinafashionstore": [
       "bluze",
-      "pantollona"
+      "pantollona",
+      "tuta"
     ],
     "Joraonline": [
       "mbulese divani"
@@ -387,11 +398,14 @@
       "bluze",
       "pantollona",
       "t-shirt",
-      "veshje"
+      "veshje",
+      "kemishe",
+      "tuta"
     ],
     "LENTI ÇAGLLAVIC": [
       "t-shirt",
-      "veshje"
+      "veshje",
+      "bluze"
     ],
     "LentiLF": [
       "bluze"
@@ -414,7 +428,11 @@
       "Veshje"
     ],
     "LFK": [
-      "kemishe"
+      "kemishe",
+      "bluze",
+      "pantollona",
+      "tuta",
+      "veshje"
     ],
     "LKK R": [
       "komplete",
@@ -512,7 +530,9 @@
       "Drite led",
       "Paisje per ushtrime",
       "aksesore",
-      "ulese per femije"
+      "ulese per femije",
+      "Triciklete",
+      "aksesore Peshore"
     ],
     "Modashoes": [
       "atlete",
@@ -535,7 +555,8 @@
     ],
     "NOVA": [
       "pantollona",
-      "veshje"
+      "veshje",
+      "bluze"
     ],
     "Nyxonline": [
       "aksesore"
@@ -601,7 +622,8 @@
     ],
     "RonStoreks": [
       "mbulese",
-      "mbulese divani"
+      "mbulese divani",
+      "bluze"
     ],
     "Rreth Femrave": [
       "bluze"
@@ -638,7 +660,9 @@
     ],
     "SIVEGETA": [
       "triciklet",
-      "vegel pune"
+      "vegel pune",
+      "Aksesore",
+      "Pastrues me avull"
     ],
     "SOLEMI01": [
       "aksesore",
@@ -674,7 +698,16 @@
       "aksesore depilatore",
       "aksesore laps",
       "aksesore masazher",
-      "aksesore ngjites"
+      "aksesore ngjites",
+      "aksesore korigjues",
+      "aksesore organizues",
+      "aksesore ventilatore",
+      "korigjues per vesh",
+      "kufje",
+      "pastrues me avull",
+      "pllaka celiku",
+      "sprej",
+      "sprej polir"
     ],
     "Tarashop SAS_veshjeislame": [
       "bluze",
@@ -693,7 +726,8 @@
       "mbulese",
       "aksesore mbrojtese",
       "aksesore ngjites",
-      "jastek ortopedik"
+      "jastek ortopedik",
+      "sprej"
     ],
     "Toponline": [
       "aksesore",
@@ -732,7 +766,15 @@
       "veshje",
       "aksesore mbulese",
       "t-shirt",
-      "veshje ortopedik"
+      "veshje ortopedik",
+      "Lodder",
+      "akesore tigan",
+      "aksesore aromatizues",
+      "aksesore karikues",
+      "aksesore ngjites",
+      "aksesore organizues",
+      "aksesore pompe",
+      "aksesore tigan"
     ],
     "TREGUONLINEALB": [
       "Aksesore"
@@ -789,14 +831,16 @@
       "mbulese"
     ],
     "LF": [
-      "bluze"
+      "bluze",
+      "pantollona"
     ],
     "MAXX OUTLET GROUP26": [
       "bluze",
       "veshje"
     ],
     "Maxxgroup26": [
-      "veshje"
+      "veshje",
+      "bluze"
     ],
     "Regina Center SH.P.K.": [
       "veshje"
@@ -811,7 +855,8 @@
     "VD1": [
       "bluze",
       "kemishe",
-      "veshje"
+      "veshje",
+      "pantollona"
     ],
     "WowTea": [
       "1 slim ice tea"
@@ -842,7 +887,9 @@
       "veshje"
     ],
     "LPP G": [
-      "bluze"
+      "bluze",
+      "tuta",
+      "xhup"
     ],
     "LKK V": [
       "kemishe"
@@ -857,7 +904,8 @@
     "LF-Online": [
       "bluze",
       "tuta",
-      "veshje"
+      "veshje",
+      "pantollona"
     ],
     "AcsStore": [
       "aksesore"
@@ -867,39 +915,138 @@
     ],
     "onlineRe": [
       "bluze",
-      "mbulese"
+      "mbulese",
+      "veshje"
     ],
     "DitaShop": [
       "aksesore",
       "fasho lidhese",
       "krem",
       "shampo",
-      "suplimente"
+      "suplimente",
+      "sprej"
     ],
     "DailyShop": [
       "aksesore",
       "fasho lidhese",
       "krem",
-      "suplimente"
+      "suplimente",
+      "Sprej kunder insekteve",
+      "shampo",
+      "sprej",
+      "sprej per depilim",
+      "sprej polir"
     ],
     "MegaShop": [
       "fasho lidhese",
-      "krem"
+      "krem",
+      "Sprej kunder insekteve",
+      "shajmpo",
+      "shampo",
+      "shan",
+      "sprej per mure",
+      "suplimente"
     ],
     "Fiatshop": [
       "fasho lidhese",
       "krem",
-      "suplimente"
+      "suplimente",
+      "Sprej kunder insekteve",
+      "aksesore per kopsht me rrota",
+      "sha",
+      "shaampo",
+      "shamo",
+      "shampo"
     ],
     "GogiMarkt": [
       "fasho lidhese",
-      "suplimente"
+      "suplimente",
+      "krem",
+      "sprej kunder mykut"
     ],
     "FreshLine": [
       "aksesore per kopsht me rrota",
-      "krem"
+      "krem",
+      "krem per duar",
+      "shampo",
+      "sprej kunder mykut",
+      "suplimente",
+      "veshje"
     ],
     "PIKOOUTFIT": [
+      "bluze"
+    ],
+    "OnlineShopstore": [
+      "bluze",
+      "drite led",
+      "fasho lidhese",
+      "paisje per ushtrime"
+    ],
+    "LU Brand": [
+      "bluze",
+      "jakane",
+      "veshje",
+      "xhup"
+    ],
+    "LKK S": [
+      "bluze",
+      "tuta"
+    ],
+    "PremiumPerfume": [
+      "aksesore"
+    ],
+    "Morea Online": [
+      "bluze"
+    ],
+    "SecondsHandsAvia": [
+      "2",
+      "bluze"
+    ],
+    "KOSOVAPRODUCT": [
+      "aksesore"
+    ],
+    "Siaristore01": [
+      "aksesore",
+      "aksesore aromatizues",
+      "aksesore ngjites",
+      "aparat per ngjyrosje",
+      "loder",
+      "shampo",
+      "veshje"
+    ],
+    "RSTOR": [
+      "bluze"
+    ],
+    "R-STORE": [
+      "bluze",
+      "pantollona",
+      "tuta"
+    ],
+    "lorifashiooon1": [
+      "bluze",
+      "pantollona"
+    ],
+    "PrimeStore": [
+      "aksesore",
+      "aksesore depilatore",
+      "aksesore masazhues",
+      "krem",
+      "pastruse me avull"
+    ],
+    "OFERTASHOP": [
+      "krem"
+    ],
+    "RINAT": [
+      "aksesore",
+      "bluze"
+    ],
+    "Donikaloci": [
+      "t-shirt"
+    ],
+    "Pantollona": [
+      "pantollona"
+    ],
+    "G F": [
       "bluze"
     ]
   },

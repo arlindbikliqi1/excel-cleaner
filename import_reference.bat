@@ -3,6 +3,10 @@ setlocal
 cd /d "%~dp0"
 
 if not exist "venv\Scripts\python.exe" (
+  if exist "venv" (
+    echo Venv i vjeter i prishur ^(Mac/Linux^) — rikrijimi...
+    rmdir /s /q venv
+  )
   echo Krijimi i venv...
   python -m venv venv
   if errorlevel 1 (

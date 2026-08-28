@@ -7,15 +7,28 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 
 
+def _safe_is_file(path: Path) -> bool:
+    """Kontroll i sigurt — symlink i prishur në Windows nuk hedh OSError."""
+    try:
+        return path.is_file()
+    except OSError:
+        return False
+
+
 def project_python() -> Path | None:
-    candidates = [
-        ROOT / "venv" / "bin" / "python3",
-        ROOT / "venv" / "bin" / "python",
-        ROOT / "venv" / "Scripts" / "python.exe",
-        ROOT / "venv" / "Scripts" / "python3.exe",
-    ]
+    if sys.platform == "win32":
+        candidates = [
+            ROOT / "venv" / "Scripts" / "python.exe",
+            ROOT / "venv" / "Scripts" / "python3.exe",
+        ]
+    else:
+        candidates = [
+            ROOT / "venv" / "bin" / "python3",
+            ROOT / "venv" / "bin" / "python",
+            ROOT / "venv" / "Scripts" / "python.exe",
+        ]
     for path in candidates:
-        if path.exists():
+        if _safe_is_file(path):
             return path
     return None
 
@@ -25,7 +38,14 @@ def ensure_project_venv() -> None:
     venv_py = project_python()
     if venv_py is None:
         return
-    if Path(sys.executable).resolve() == venv_py.resolve():
+    try:
+        same = Path(sys.executable).resolve() == venv_py.resolve()
+    except OSError:
+        same = False
+    if same:
+        return
+    if sys.platform == "win32":
+        # os.execv nuk punon mirë në Windows — bat/skripti thërret direkt venv\Scripts\python.exe
         return
     import os
 

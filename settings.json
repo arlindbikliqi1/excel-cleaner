@@ -64,7 +64,8 @@
       "aksesore aromatizues"
     ],
     "Avia Ferizaj": [
-      "pantollona"
+      "pantollona",
+      "bluze"
     ],
     "Avia Fushe Kosove": [
       "bluze",
@@ -261,7 +262,13 @@
       "aksesore organizues",
       "aksesore per insekte",
       "aksesore raft",
-      "akssore"
+      "akssore",
+      "akssore shirit",
+      "drejtuese per gihshta",
+      "paisje kunder insekteve",
+      "pastrues me avull",
+      "pastruese me avull",
+      "sprej kunder zjarrit"
     ],
     "Eddshoes": [
       "atlete",
@@ -360,7 +367,8 @@
     "janinafashionstore": [
       "bluze",
       "pantollona",
-      "tuta"
+      "tuta",
+      "veshje"
     ],
     "Joraonline": [
       "mbulese divani"
@@ -375,7 +383,8 @@
       "pantollona",
       "tuta",
       "veshje",
-      "xhakete"
+      "xhakete",
+      "xhup"
     ],
     "Kosbiotics": [
       "suplimente"
@@ -405,7 +414,8 @@
     "LENTI ÇAGLLAVIC": [
       "t-shirt",
       "veshje",
-      "bluze"
+      "bluze",
+      "tuta"
     ],
     "LentiLF": [
       "bluze"
@@ -707,7 +717,16 @@
       "pastrues me avull",
       "pllaka celiku",
       "sprej",
-      "sprej polir"
+      "sprej polir",
+      "aksesore masazhues",
+      "aksesore shirit",
+      "krem",
+      "paisje kunder insekteve",
+      "pastrues per kembe",
+      "pastues me avull",
+      "shtrenguese gjuri",
+      "shtrenguese per gjunje",
+      "sprej kunder zjarrit"
     ],
     "Tarashop SAS_veshjeislame": [
       "bluze",
@@ -727,7 +746,8 @@
       "aksesore mbrojtese",
       "aksesore ngjites",
       "jastek ortopedik",
-      "sprej"
+      "sprej",
+      "mbrojtese per gjunje"
     ],
     "Toponline": [
       "aksesore",
@@ -774,7 +794,13 @@
       "aksesore ngjites",
       "aksesore organizues",
       "aksesore pompe",
-      "aksesore tigan"
+      "aksesore tigan",
+      "akseosre cante",
+      "aksesor",
+      "aksesore cante",
+      "aksesore kuti organizuese",
+      "aksesore tavoline",
+      "drejtuese per floke"
     ],
     "TREGUONLINEALB": [
       "Aksesore"
@@ -884,7 +910,8 @@
     "LPP Z": [
       "bluze",
       "drite led",
-      "veshje"
+      "veshje",
+      "xhup"
     ],
     "LPP G": [
       "bluze",
@@ -924,7 +951,8 @@
       "krem",
       "shampo",
       "suplimente",
-      "sprej"
+      "sprej",
+      "sprej per pastrimin e dhembeve"
     ],
     "DailyShop": [
       "aksesore",
@@ -935,7 +963,9 @@
       "shampo",
       "sprej",
       "sprej per depilim",
-      "sprej polir"
+      "sprej polir",
+      "aksesore brushe",
+      "sprej per pastrimin e dhembeve"
     ],
     "MegaShop": [
       "fasho lidhese",
@@ -945,7 +975,9 @@
       "shampo",
       "shan",
       "sprej per mure",
-      "suplimente"
+      "suplimente",
+      "sprej",
+      "sprej per pastrimin e dhembeve"
     ],
     "Fiatshop": [
       "fasho lidhese",
@@ -956,13 +988,18 @@
       "sha",
       "shaampo",
       "shamo",
-      "shampo"
+      "shampo",
+      "shjampo",
+      "sprej",
+      "sprej per pastrimin e dhembeve"
     ],
     "GogiMarkt": [
       "fasho lidhese",
       "suplimente",
       "krem",
-      "sprej kunder mykut"
+      "sprej kunder mykut",
+      "aksesore pllaka celiku",
+      "krem per depilim"
     ],
     "FreshLine": [
       "aksesore per kopsht me rrota",
@@ -971,10 +1008,12 @@
       "shampo",
       "sprej kunder mykut",
       "suplimente",
-      "veshje"
+      "veshje",
+      "krem per depilim"
     ],
     "PIKOOUTFIT": [
-      "bluze"
+      "bluze",
+      "veshje"
     ],
     "OnlineShopstore": [
       "bluze",
@@ -1000,7 +1039,8 @@
     ],
     "SecondsHandsAvia": [
       "2",
-      "bluze"
+      "bluze",
+      "kemishe"
     ],
     "KOSOVAPRODUCT": [
       "aksesore"
@@ -1038,7 +1078,8 @@
     ],
     "RINAT": [
       "aksesore",
-      "bluze"
+      "bluze",
+      "drite led"
     ],
     "Donikaloci": [
       "t-shirt"
@@ -1048,6 +1089,21 @@
     ],
     "G F": [
       "bluze"
+    ],
+    "ButikuLF": [
+      "bluze"
+    ],
+    "Blejprejshpis": [
+      "aksesore"
+    ],
+    "Edfr": [
+      "bluze"
+    ],
+    "ESRA": [
+      "bluze"
+    ],
+    "KORABISH": [
+      "veshje"
     ]
   },
   "surnames": [

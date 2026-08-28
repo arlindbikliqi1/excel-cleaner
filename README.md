@@ -38,6 +38,27 @@ http://127.0.0.1:5000 — **admin** / **admin123**
 
 ## Nisja
 
+**Mac / Linux:**
+```bash
+./import_reference.sh   # herën e parë ose kur shtoni listë të re Excel
+./start.sh
+```
+
+**Windows (CMD ose PowerShell):**
+```bat
+import_reference.bat
+start.bat
+```
+
+**Mac (manual):**
+```bash
+venv/bin/python3 scripts/import_cleaned_reference.py
+./start.sh
+```
+
+> Excel-et referencë (`LINDI LISTA DOGANA.xlsx`, `LINDI DOGANA 2/3/5.xlsx`) duhen kopjuar në `uploads/` — nuk janë në git.
+
+Ose manualisht:
 ```bash
 cd excel-cleaner
 python3 -m venv venv
@@ -45,5 +66,3 @@ source venv/bin/activate   # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 python app.py
 ```
-
-Ose: `./start.sh`

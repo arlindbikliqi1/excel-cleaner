@@ -355,6 +355,26 @@ def _training_index(data: dict) -> tuple[dict[str, str], list[tuple[str, str]]]:
 _CACHE: tuple[dict[str, str], list[tuple[str, str]]] | None = None
 _BIZ_CACHE: dict[str, dict[str, str]] | None = None
 _REF_TOKEN_INDEX: dict[str, list[str]] | None = None
+_TRAINING_MTIME: float | None = None
+
+
+def _training_file_mtime() -> float:
+    try:
+        return TRAINING_PATH.stat().st_mtime
+    except OSError:
+        return 0.0
+
+
+def _ensure_training_fresh() -> None:
+    """Rifreskon cache kur product_training.json ndryshon (pas importit)."""
+    global _CACHE, _BIZ_CACHE, _REF_TOKEN_INDEX, _TRAINING_MTIME
+    mtime = _training_file_mtime()
+    if _CACHE is not None and _TRAINING_MTIME == mtime:
+        return
+    _CACHE = None
+    _BIZ_CACHE = None
+    _REF_TOKEN_INDEX = None
+    _TRAINING_MTIME = mtime
 
 
 def _normalize_business_key(name: str) -> str:
@@ -399,6 +419,7 @@ def _business_training_index(data: dict) -> dict[str, dict[str, str]]:
 
 def _get_index() -> tuple[dict[str, str], list[tuple[str, str]]]:
     global _CACHE
+    _ensure_training_fresh()
     if _CACHE is None:
         _CACHE = _training_index(load_training_data())
     return _CACHE
@@ -406,16 +427,18 @@ def _get_index() -> tuple[dict[str, str], list[tuple[str, str]]]:
 
 def _get_business_index() -> dict[str, dict[str, str]]:
     global _BIZ_CACHE
+    _ensure_training_fresh()
     if _BIZ_CACHE is None:
         _BIZ_CACHE = _business_training_index(load_training_data())
     return _BIZ_CACHE
 
 
 def reload_training_cache() -> None:
-    global _CACHE, _BIZ_CACHE, _REF_TOKEN_INDEX
+    global _CACHE, _BIZ_CACHE, _REF_TOKEN_INDEX, _TRAINING_MTIME
     _CACHE = None
     _BIZ_CACHE = None
     _REF_TOKEN_INDEX = None
+    _TRAINING_MTIME = None
 
 
 def _get_ref_token_index() -> dict[str, list[str]]:

@@ -8,20 +8,20 @@
 </div>
 
 <div class="row g-4">
-  <div class="col-lg-7">
+  <div class="col-lg-8">
     <div class="card-app">
       <div class="card-header">
         <i class="fas fa-sliders me-2 text-primary"></i>Konfigurimi
       </div>
       <div class="card-body">
-        <form method="post">
+        <form method="post" id="generationSettingsForm">
           <div class="form-check form-switch mb-4">
             <input class="form-check-input" type="checkbox" role="switch" id="enabled" name="enabled"
                    {% if cfg.enabled %}checked{% endif %}>
             <label class="form-check-label fw-semibold" for="enabled">Aktivizo gjenerimin random</label>
           </div>
 
-          <h6 class="fw-bold text-dark mb-3"><i class="fas fa-weight-hanging me-2 text-muted"></i>Pesha/kg</h6>
+          <h6 class="fw-bold text-dark mb-3"><i class="fas fa-weight-hanging me-2 text-muted"></i>Pesha/kg (default për të gjithë)</h6>
           <div class="row g-3 mb-4">
             <div class="col-sm-4">
               <label class="form-label small">Min (kg)</label>
@@ -42,7 +42,7 @@
             </div>
           </div>
 
-          <h6 class="fw-bold text-dark mb-3"><i class="fas fa-tag me-2 text-muted"></i>Çmimi</h6>
+          <h6 class="fw-bold text-dark mb-3"><i class="fas fa-tag me-2 text-muted"></i>Çmimi (default për të gjithë)</h6>
           <div class="row g-3 mb-4">
             <div class="col-sm-4">
               <label class="form-label small">Min</label>
@@ -56,6 +56,76 @@
             </div>
           </div>
 
+          <hr class="my-4">
+
+          <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+            <h6 class="fw-bold text-dark mb-0">
+              <i class="fas fa-store me-2 text-muted"></i>Range sipas biznesit
+            </h6>
+            <span class="badge bg-light text-dark border" id="bizRangeCount">
+              {{ cfg.business_pesha_ranges|length }} biznes{% if cfg.business_pesha_ranges|length != 1 %}e{% endif %}
+            </span>
+          </div>
+          <p class="small text-muted mb-3">
+            Shto biznese (nga lista ose shkruaj emrin saktësisht si në Excel) dhe cakto range për <strong>peshën</strong>.
+            <strong>Çmimin</strong> e lë bosh për default, ose plotëso min–max për atë biznes.
+            Range-i i biznesit mbetet <strong>strikt</strong> — totali i listës mbushhet nga bizneset e tjera.
+            Nëse lista është bosh, përdoret range-i default lart për të gjitha.
+          </p>
+
+          <div id="bizRangeList" class="d-grid gap-3 mb-3">
+            {% for item in cfg.business_pesha_ranges %}
+            <div class="biz-range-row" data-biz-range-row>
+              <div class="biz-range-row__head">
+                <div class="biz-search-picker" data-biz-picker>
+                  <label class="form-label small">Biznesi</label>
+                  <input type="hidden" name="biz_range_name" value="{{ item.business }}" required>
+                  <div class="biz-search-picker__control">
+                    <i class="fas fa-magnifying-glass"></i>
+                    <input type="search" class="form-control biz-search-input"
+                           placeholder="Kërko ose shkruaj emrin si në Excel…"
+                           autocomplete="off" spellcheck="false" value="{{ item.business }}">
+                  </div>
+                  <div class="biz-search-dropdown" hidden></div>
+                </div>
+                <button type="button" class="btn btn-outline-danger btn-sm" data-remove-biz-range title="Hiq">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </div>
+              <div class="row g-2">
+                <div class="col-6 col-md-3">
+                  <label class="form-label small">Pesha min *</label>
+                  <input type="number" class="form-control" name="biz_range_min" step="0.01" min="0.01"
+                         value="{{ item.pesha_min }}" required>
+                </div>
+                <div class="col-6 col-md-3">
+                  <label class="form-label small">Pesha max *</label>
+                  <input type="number" class="form-control" name="biz_range_max" step="0.01" min="0.01"
+                         value="{{ item.pesha_max }}" required>
+                </div>
+                <div class="col-6 col-md-3">
+                  <label class="form-label small">Çmim min <span class="text-muted fw-normal">(ops.)</span></label>
+                  <input type="number" class="form-control" name="biz_range_cmimi_min" step="1" min="1"
+                         value="{{ item.cmimi_min if item.cmimi_min is not none else '' }}"
+                         placeholder="default">
+                </div>
+                <div class="col-6 col-md-3">
+                  <label class="form-label small">Çmim max <span class="text-muted fw-normal">(ops.)</span></label>
+                  <input type="number" class="form-control" name="biz_range_cmimi_max" step="1" min="1"
+                         value="{{ item.cmimi_max if item.cmimi_max is not none else '' }}"
+                         placeholder="default">
+                </div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+
+          <div class="d-flex flex-wrap gap-2 mb-4">
+            <button type="button" class="btn btn-outline-primary" id="addBizRange">
+              <i class="fas fa-plus me-1"></i>Shto biznes
+            </button>
+          </div>
+
           <button type="submit" class="btn btn-primary">
             <i class="fas fa-save me-1"></i>Ruaj settings
           </button>
@@ -64,7 +134,7 @@
     </div>
   </div>
 
-  <div class="col-lg-5">
+  <div class="col-lg-4">
     <div class="card-app h-100">
       <div class="card-header" style="background:#eff6ff">
         <span class="text-primary"><i class="fas fa-circle-info me-2"></i>Si funksionon</span>
@@ -72,12 +142,215 @@
       <div class="card-body small text-muted">
         <ul class="mb-0 ps-3">
           <li class="mb-2">Kur ngarkon listën, vendos <strong class="text-dark">pesha totale</strong> (p.sh. 410 kg).</li>
-          <li class="mb-2">Sistemi shpërndan pesha random për çdo rresht që totali të jetë i barabartë me këtë vlerë.</li>
-          <li class="mb-2">Çmimi gjenerohet random për çdo rresht — nuk ka total të caktuar paraprakisht.</li>
+          <li class="mb-2">Sistemi shpërndan pesha random që totali të jetë i barabartë me këtë vlerë.</li>
+          <li class="mb-2">Emri i biznesit duhet të jetë <strong class="text-dark">i njëjtë si te kolona Shitesi</strong> në Excel (edhe nëse nuk është te lista e shitësve).</li>
+          <li class="mb-2">Range-i i biznesit është strikt (p.sh. 0.10–0.20); totali mbushhet nga rreshtat e tjerë.</li>
+          <li class="mb-2">Çmimi i biznesit është opsional — bosh = default.</li>
+          <li class="mb-2">Nëse nuk ke asnjë biznes këtu, gjenerimi mbetet si më parë.</li>
           <li>Gjenerimi bëhet <em>para</em> pastrimit të emrave dhe mapimit të produkteve.</li>
         </ul>
       </div>
     </div>
   </div>
 </div>
+
+<template id="bizRangeTemplate">
+  <div class="biz-range-row" data-biz-range-row>
+    <div class="biz-range-row__head">
+      <div class="biz-search-picker" data-biz-picker>
+        <label class="form-label small">Biznesi</label>
+        <input type="hidden" name="biz_range_name" value="" required>
+        <div class="biz-search-picker__control">
+          <i class="fas fa-magnifying-glass"></i>
+          <input type="search" class="form-control biz-search-input"
+                 placeholder="Kërko ose shkruaj emrin si në Excel…"
+                 autocomplete="off" spellcheck="false" value="">
+        </div>
+        <div class="biz-search-dropdown" hidden></div>
+      </div>
+      <button type="button" class="btn btn-outline-danger btn-sm" data-remove-biz-range title="Hiq">
+        <i class="fas fa-trash"></i>
+      </button>
+    </div>
+    <div class="row g-2">
+      <div class="col-6 col-md-3">
+        <label class="form-label small">Pesha min *</label>
+        <input type="number" class="form-control" name="biz_range_min" step="0.01" min="0.01"
+               value="{{ cfg.pesha_min }}" required>
+      </div>
+      <div class="col-6 col-md-3">
+        <label class="form-label small">Pesha max *</label>
+        <input type="number" class="form-control" name="biz_range_max" step="0.01" min="0.01"
+               value="{{ cfg.pesha_max }}" required>
+      </div>
+      <div class="col-6 col-md-3">
+        <label class="form-label small">Çmim min <span class="text-muted fw-normal">(ops.)</span></label>
+        <input type="number" class="form-control" name="biz_range_cmimi_min" step="1" min="1"
+               value="" placeholder="default">
+      </div>
+      <div class="col-6 col-md-3">
+        <label class="form-label small">Çmim max <span class="text-muted fw-normal">(ops.)</span></label>
+        <input type="number" class="form-control" name="biz_range_cmimi_max" step="1" min="1"
+               value="" placeholder="default">
+      </div>
+    </div>
+  </div>
+</template>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  const BUSINESS_NAMES = {{ business_names|tojson }};
+  const list = document.getElementById('bizRangeList');
+  const template = document.getElementById('bizRangeTemplate');
+  const addBtn = document.getElementById('addBizRange');
+  const countBadge = document.getElementById('bizRangeCount');
+
+  function updateCount() {
+    const n = list.querySelectorAll('[data-biz-range-row]').length;
+    countBadge.textContent = n + ' biznes' + (n === 1 ? '' : 'e');
+  }
+
+  function normalize(text) {
+    return String(text || '').toLowerCase().trim();
+  }
+
+  function filterNames(query) {
+    const q = normalize(query);
+    if (!q) return BUSINESS_NAMES.slice(0, 40);
+    return BUSINESS_NAMES.filter((name) => normalize(name).includes(q)).slice(0, 40);
+  }
+
+  function renderDropdown(picker, query) {
+    const dropdown = picker.querySelector('.biz-search-dropdown');
+    const matches = filterNames(query);
+    const q = String(query || '').trim();
+    let html = '';
+    if (matches.length) {
+      html = matches.map((name) =>
+        `<button type="button" class="biz-search-option" data-value="${name.replace(/"/g, '&quot;')}">${name}</button>`
+      ).join('');
+    }
+    const exact = matches.some((name) => normalize(name) === normalize(q));
+    if (q && !exact) {
+      html += `<button type="button" class="biz-search-option biz-search-option--custom" data-value="${q.replace(/"/g, '&quot;')}">Përdor “${q}” (si në Excel)</button>`;
+    }
+    if (!html) {
+      html = '<div class="biz-search-empty">Shkruaj emrin e biznesit si në Excel</div>';
+    }
+    dropdown.innerHTML = html;
+    dropdown.hidden = false;
+  }
+
+  function closeDropdown(picker) {
+    const dropdown = picker.querySelector('.biz-search-dropdown');
+    if (dropdown) dropdown.hidden = true;
+  }
+
+  function selectBusiness(picker, name) {
+    const hidden = picker.querySelector('input[name="biz_range_name"]');
+    const input = picker.querySelector('.biz-search-input');
+    if (hidden) hidden.value = name;
+    if (input) input.value = name;
+    closeDropdown(picker);
+  }
+
+  function bindPicker(picker) {
+    const input = picker.querySelector('.biz-search-input');
+    const hidden = picker.querySelector('input[name="biz_range_name"]');
+    const dropdown = picker.querySelector('.biz-search-dropdown');
+    if (!input || !hidden || !dropdown) return;
+
+    input.addEventListener('focus', () => renderDropdown(picker, input.value));
+    input.addEventListener('input', () => {
+      const typed = input.value.trim();
+      // Mbaj emrin e shkruar (edhe jashtë listës) që të përputhet me Excel
+      hidden.value = typed;
+      renderDropdown(picker, input.value);
+    });
+    input.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') {
+        closeDropdown(picker);
+        return;
+      }
+      if (event.key === 'Enter') {
+        const first = dropdown.querySelector('.biz-search-option');
+        if (first && !dropdown.hidden) {
+          event.preventDefault();
+          selectBusiness(picker, first.getAttribute('data-value') || first.textContent.trim());
+        } else if (input.value.trim()) {
+          event.preventDefault();
+          selectBusiness(picker, input.value.trim());
+        }
+      }
+    });
+
+    dropdown.addEventListener('mousedown', (event) => {
+      const option = event.target.closest('.biz-search-option');
+      if (!option) return;
+      event.preventDefault();
+      selectBusiness(picker, option.getAttribute('data-value') || option.textContent.trim());
+    });
+
+    input.addEventListener('blur', () => {
+      window.setTimeout(() => {
+        const typed = input.value.trim();
+        if (!typed) {
+          hidden.value = '';
+          closeDropdown(picker);
+          return;
+        }
+        const exact = BUSINESS_NAMES.find((name) => normalize(name) === normalize(typed));
+        selectBusiness(picker, exact || typed);
+      }, 140);
+    });
+  }
+
+  function bindRow(row) {
+    const removeBtn = row.querySelector('[data-remove-biz-range]');
+    if (removeBtn) {
+      removeBtn.addEventListener('click', () => {
+        row.remove();
+        updateCount();
+      });
+    }
+    const picker = row.querySelector('[data-biz-picker]');
+    if (picker) bindPicker(picker);
+  }
+
+  list.querySelectorAll('[data-biz-range-row]').forEach(bindRow);
+
+  addBtn.addEventListener('click', () => {
+    const node = template.content.firstElementChild.cloneNode(true);
+    list.appendChild(node);
+    bindRow(node);
+    updateCount();
+    node.querySelector('.biz-search-input')?.focus();
+  });
+
+  document.getElementById('generationSettingsForm')?.addEventListener('submit', (event) => {
+    const rows = list.querySelectorAll('[data-biz-range-row]');
+    for (const row of rows) {
+      const hidden = row.querySelector('input[name="biz_range_name"]');
+      const search = row.querySelector('.biz-search-input');
+      const name = (hidden?.value || search?.value || '').trim();
+      if (!name) {
+        event.preventDefault();
+        alert('Shkruaj ose zgjidh emrin e biznesit (siç shfaqet te kolona Shitesi në Excel).');
+        search?.focus();
+        return;
+      }
+      if (hidden) hidden.value = name;
+      const cMin = (row.querySelector('input[name="biz_range_cmimi_min"]')?.value || '').trim();
+      const cMax = (row.querySelector('input[name="biz_range_cmimi_max"]')?.value || '').trim();
+      if ((cMin && !cMax) || (!cMin && cMax)) {
+        event.preventDefault();
+        alert('Për çmim sipas biznesit plotëso të dyja: Çmim min dhe Çmim max — ose lëri të dyja bosh.');
+        return;
+      }
+    }
+  });
+})();
+</script>
 {% endblock %}

@@ -51,6 +51,7 @@ DEFAULT_SETTINGS = {
         "pesha_common": [0.55, 0.60, 0.53, 0.58, 0.65, 0.68, 0.70, 0.74, 0.80],
         "cmimi_min": 15,
         "cmimi_max": 22,
+        "business_pesha_ranges": [],
     },
 }
 
@@ -214,6 +215,9 @@ def _ensure_random_columns(data: dict) -> dict:
         merged = deepcopy(defaults)
         merged.update(cfg)
         cfg = merged
+    ranges = cfg.get("business_pesha_ranges")
+    if not isinstance(ranges, list):
+        cfg["business_pesha_ranges"] = []
     data["random_columns"] = cfg
     return data
 

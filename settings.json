@@ -2917,6 +2917,15 @@
       0.8
     ],
     "cmimi_min": 15,
-    "cmimi_max": 22
+    "cmimi_max": 22,
+    "business_pesha_ranges": [
+      {
+        "business": "A Fashion",
+        "pesha_min": 0.1,
+        "pesha_max": 0.2,
+        "cmimi_min": 1,
+        "cmimi_max": 2
+      }
+    ]
   }
 }

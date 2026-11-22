@@ -1349,6 +1349,14 @@ def upload():
             if gen_meta.get("cmimi_generated"):
                 cfg = get_random_columns_config(settings)
                 parts.append(f"Çmimi random {cfg['cmimi_min']}–{cfg['cmimi_max']}")
+            if gen_meta.get("business_ranges_used"):
+                parts.append(
+                    f"pesha sipas biznesit për {gen_meta['business_ranges_used']} rreshta"
+                )
+            if gen_meta.get("business_cmimi_used"):
+                parts.append(
+                    f"çmim sipas biznesit për {gen_meta['business_cmimi_used']} rreshta"
+                )
             if parts:
                 flash("Gjenerim random: " + " · ".join(parts) + ".", "info")
         if dg_msg:
@@ -1495,6 +1503,64 @@ def detect_unknown():
     return redirect(url_for("businesses"))
 
 
+def _parse_business_pesha_ranges_from_form() -> list[dict]:
+    """Lexon ranges për biznes: pesha e detyrueshme, çmimi opsional."""
+    names = request.form.getlist("biz_range_name")
+    mins = request.form.getlist("biz_range_min")
+    maxs = request.form.getlist("biz_range_max")
+    cmimi_mins = request.form.getlist("biz_range_cmimi_min")
+    cmimi_maxs = request.form.getlist("biz_range_cmimi_max")
+    # getlist mund të jetë më i shkurtër nëse rreshta të rinj s'kanë fusha — plotëso
+    while len(cmimi_mins) < len(names):
+        cmimi_mins.append("")
+    while len(cmimi_maxs) < len(names):
+        cmimi_maxs.append("")
+
+    ranges: list[dict] = []
+    seen: set[str] = set()
+    for name, lo_raw, hi_raw, c_lo_raw, c_hi_raw in zip(
+        names, mins, maxs, cmimi_mins, cmimi_maxs
+    ):
+        business = (name or "").strip()
+        if not business:
+            continue
+        key = normalize_business_name(business)
+        if key in seen:
+            continue
+        try:
+            lo = float(str(lo_raw).replace(",", "."))
+            hi = float(str(hi_raw).replace(",", "."))
+        except (TypeError, ValueError):
+            continue
+        if lo <= 0 or hi <= 0:
+            continue
+        if lo > hi:
+            lo, hi = hi, lo
+        entry = {
+            "business": business,
+            "pesha_min": round(lo, 2),
+            "pesha_max": round(hi, 2),
+            "cmimi_min": None,
+            "cmimi_max": None,
+        }
+        c_lo_txt = str(c_lo_raw or "").strip()
+        c_hi_txt = str(c_hi_raw or "").strip()
+        if c_lo_txt and c_hi_txt:
+            try:
+                c_lo = int(float(c_lo_txt.replace(",", ".")))
+                c_hi = int(float(c_hi_txt.replace(",", ".")))
+            except (TypeError, ValueError):
+                c_lo = c_hi = None
+            if c_lo is not None and c_hi is not None:
+                if c_lo > c_hi:
+                    c_lo, c_hi = c_hi, c_lo
+                entry["cmimi_min"] = c_lo
+                entry["cmimi_max"] = c_hi
+        seen.add(key)
+        ranges.append(entry)
+    return ranges
+
+
 @app.route("/generation-settings", methods=["GET", "POST"])
 @login_required
 def generation_settings():
@@ -1531,13 +1597,20 @@ def generation_settings():
             "pesha_common": common_vals or get_random_columns_config({})["pesha_common"],
             "cmimi_min": cmimi_min,
             "cmimi_max": cmimi_max,
+            "business_pesha_ranges": _parse_business_pesha_ranges_from_form(),
         }
         save_random_columns_settings(cfg)
         flash("Settings për Pesha & Çmimi u ruajtën.", "success")
         return redirect(url_for("generation_settings"))
 
-    cfg = get_random_columns_config(load_settings())
-    return render_template("generation_settings.html", cfg=cfg)
+    settings = load_settings()
+    cfg = get_random_columns_config(settings)
+    business_names = sorted(settings.get("business_categories", {}).keys(), key=str.lower)
+    return render_template(
+        "generation_settings.html",
+        cfg=cfg,
+        business_names=business_names,
+    )
 
 
 @app.route("/recipient-rules", methods=["GET", "POST"])
